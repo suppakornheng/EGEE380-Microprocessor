@@ -1,0 +1,152 @@
+,,,                PROCESSOR PIC16F628
+,,,                #include <P16F628.INC>
+00002007,3F4A,,                __CONFIG        _CP_OFF & _MCLRE_OFF & _HS_OSC & _LVP_OFF & _WDT_OFF
+,,,
+,,,                cblock  0x20
+,,,                        temp
+,,,                        temp1
+,,,                        count
+,,,                        count0
+,,,                        count1
+,,,                        count2
+,,,                endc
+,,,
+00000000,,,                ORG 0x00                ;reset vector
+00000000,2801,,                goto    main    ;vector to main program
+,,,
+,,,
+00000001,,main:,main:
+00000001,2053,,                call    Init
+,,,
+00000002,,L1:,L1:
+00000002,1805,,                btfsc   PORTA,0         ; is UP pressed?
+00000003,2809,,                goto    L2
+,,,
+00000004,300A,,                movlw   .10
+00000005,2035,,                call    DelayMS
+,,,
+00000006,1805,,                btfsc   PORTA,0
+00000007,2809,,                goto    L2
+,,,
+00000008,0AA0,,                incf    temp,f
+,,,
+00000009,1885,L2:,L2:             btfsc   PORTA,1         ; is DOWN pressed?
+0000000A,2810,,                goto    L3
+,,,
+0000000B,300A,,                movlw   .10
+0000000C,2035,,                call    DelayMS
+,,,
+0000000D,1885,,                btfsc   PORTA,1
+0000000E,2810,,                goto    L3
+,,,
+0000000F,03A0,,                decf    temp,f
+,,,
+00000010,3010,L3,L3              movlw   .16
+00000011,0220,,                subwf   temp,w
+00000012,1D03,,                btfss   STATUS,Z        ;check if temp=16?
+00000013,2816,,                goto    L4              ;No,check zero
+,,,
+00000014,01A0,,                clrf    temp            ;Yes, clear 'temp' back to zero
+00000015,281D,,                goto    L5                      ;Repeat the infinite loop
+,,,
+00000016,,L4:,L4:
+00000016,30FF,,                movlw   .255
+00000017,0220,,                subwf   temp,w
+00000018,1D03,,                btfss   STATUS,Z        ;check if temp=255?
+00000019,281D,,                goto    L5                      ;No, go back and do it again
+,,,
+0000001A,300F,,                movlw   .15
+0000001B,00A0,,                movwf   temp            ;yes, set temp = 16
+0000001C,281D,,                goto    L5                      ;Repeat the infinite loop
+,,,
+,,,
+0000001D,0820,L5:,L5:             movf    temp,w          ;use [Temp] to call 'Table7seg'
+0000001E,2023,,                call    Table7seg
+0000001F,0086,,                movwf   PORTB           ;Send the obtain 7 seg pattern to PORTB
+,,,
+00000020,30FA,,                movlw   .250
+00000021,2035,,                call    DelayMS
+,,,
+00000022,2802,,                goto    L1
+,,,
+,,,
+,,,;Loopup table for 7segments LED Patterns
+00000023,,Table7seg:,Table7seg:
+00000023,0782,,                addwf   PCL,F
+,,,                ;Segments       .GFEDBA
+00000024,343F,,                retlw   B'00111111'             ;Number0
+00000025,3406,,                retlw   B'00000110'             ;Number1
+00000026,345B,,                retlw   B'01011011'             ;Number2
+00000027,344F,,                retlw   B'01001111'             ;Number3
+00000028,3466,,                retlw   B'01100110'             ;Number4
+00000029,346D,,                retlw   B'01101101'             ;Number5
+0000002A,347D,,                retlw   B'01111101'             ;Number6
+0000002B,3407,,                retlw   B'00000111'             ;Number7
+0000002C,347F,,                retlw   B'01111111'             ;Number8
+0000002D,346F,,                retlw   B'01101111'             ;Number9
+0000002E,3477,,                retlw   B'01110111'             ;A
+0000002F,347C,,                retlw   B'01111100'             ;B
+,,,                ;retlw  B'01011000'             ;C little
+00000030,3439,,                retlw   B'00111001'             ;C big
+00000031,345E,,                retlw   B'01011110'             ;D
+00000032,3479,,                retlw   B'01111001'             ;E
+00000033,3471,,                retlw   B'01110001'             ;F
+00000034,3480,,                retlw   B'10000000'             ;dot-point
+,,,
+00000035,,DelayMS:,DelayMS:
+00000035,00A5,,                movwf   count2
+00000036,0AA5,,                incf    count2,f
+00000037,0BA5,,                decfsz  count2,f
+00000038,283A,,                goto    $+2
+00000039,283C,,                goto    $+3
+0000003A,203D,,                call    Delay1MS
+0000003B,2837,,                goto    $-4
+0000003C,0008,,                return
+,,,
+0000003D,,Delay1MS:,Delay1MS:
+0000003D,3032,,                movlw   .50                             ; 1 cyc
+0000003E,00A4,,                movwf   count1                  ; 1 cyc
+0000003F,,outterloop:,outterloop:
+0000003F,3005,,                movlw   .5                              ; 1 cyc * count1
+00000040,0000,,                nop                                             ; 1 cyc * count1
+00000041,00A3,,                movwf   count0                  ; 1 cyc * count1
+00000042,,innerloop:,innerloop:
+00000042,0BA3,,                decfsz  count0,F        ; 1 cyc * count1 * count0
+00000043,2842,,                goto    innerloop               ; 2 cyc * count1 * count0
+00000044,0BA4,,                decfsz  count1,F        ; 1 cyc * count1
+00000045,283F,,                goto    outterloop              ; 2 cyc * count1
+00000046,0008,,                return                                  ; 1 cyc
+,,,                ; total = 3 + (6+3.count0).count1
+,,,                ; count0 = 5 , count1 = 50, total = 1053 cyc
+,,,
+,,,; Time delay subroutine for 1.[W] seconds by calling DelayMS subroutine
+00000047,,DelayS:,DelayS:
+00000047,00A1,,                movwf   temp1
+00000048,,delays_1:,delays_1:
+00000048,30FA,,                movlw   .250
+00000049,2035,,                call    DelayMS
+0000004A,30FA,,                movlw   .250
+0000004B,2035,,                call    DelayMS
+0000004C,30FA,,                movlw   .250
+0000004D,2035,,                call    DelayMS
+0000004E,30FA,,                movlw   .250
+0000004F,2035,,                call    DelayMS
+00000050,0BA1,,                decfsz  temp1,f
+00000051,2848,,                goto    delays_1
+00000052,0008,,                return
+,,,
+00000053,,Init:,Init:
+00000053,3007,,                movlw   .7
+00000054,1283 1303,,                banksel CMCON
+00000056,009F,,                movwf   CMCON           ; Disable analog comparator
+00000057,1683 1303,,                banksel TRISB
+00000059,3000,,                movlw   0x00
+0000005A,0086,,                movwf   TRISB           ; Set PORTB as output ports
+0000005B,30FF,,                movlw   0xFF
+0000005C,0085,,                movwf   TRISA           ; Set PORTA as input ports
+0000005D,1283 1303,,                banksel PORTB
+0000005F,0186,,                clrf    PORTB
+00000060,01A0,,                clrf    temp
+00000061,0008,,                return
+,,,
+,,,                END

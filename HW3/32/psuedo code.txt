@@ -1,0 +1,21 @@
+//1button
+start
+sw_state =0
+button press?
+y: toggle sw_state -> ใช้ xor gate กับ 1 // XOR:เหมือนกัน 0 ต่างกัน 1
+n: //nothing
+sw_state = 1 or 0? 
+1: on led
+0: off led
+
+//2 button
+start
+sw1_state=0
+sw2_state=0
+loop;
+sw1 is pressed?	Y-> sw1_state xor 1
+sw2 is pressed?	Y-> sw2_state xor 1
+sw1_state=1?	Y-> LED1 on -> goto sw2_state=1?
+		N-> LED1 off -> goto sw2_state=1?
+sw2_state=1?	Y-> LED2 on -> goto loop
+		N-> LED2 off -> goto loop

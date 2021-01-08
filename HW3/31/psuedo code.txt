@@ -1,0 +1,25 @@
+20H-2FH = 0 -15
+30H-3FH = 0-0
+//initial
+source = 20H = 32
+destination = 30H
+counter = .16
+value;
+
+//start
+LOOP:
+movf	source,w	// w=21H
+movwf	FSR	// FSR =21H
+movf	INDF,w	// w = 1 
+movwf	value	// value =1
+movf	destination,w	// w=31H
+movwf	FSR		// FSR =31H
+movf 	value,w		// w = 1
+movwf	INDF		// @31H =  1
+incf	source,f		// source = 22H
+incf	destination,f	// des =32H
+decfsz	counter,f		// counter =14
+goto 	LOOP
+END
+
+

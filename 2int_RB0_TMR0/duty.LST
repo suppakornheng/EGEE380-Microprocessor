@@ -1,0 +1,370 @@
+MPASM  5.35                          DUTY.ASM   11-11-2014  14:51:50         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;*******************************************
+                      00002 ;**** Program title:  Simple Digital Clock  ***********
+                      00003 ;**** Programmer:                           ***********
+                      00004 ;******************************************
+                      00005 
+                      00006                 PROCESSOR PIC16F627A
+                      00007                 #include <P16F627A.INC>
+                      00001         LIST
+                      00002 ; P16F627A.INC  Standard Header File, Version 1.10    Microchip Technology, Inc.
+                      00265         LIST
+2007   3F78           00008                 __CONFIG        _CP_OFF & _MCLRE_ON & _INTRC_OSC_NOCLKOUT & _LVP_OFF & _WDT_OFF
+                      00009 ;                                                                             ^
+                      00010 ;                                                                                                       
+                                                                              |
+                      00011 ;                                                                                                       
+                                                    culprit, why simulation
+                      00012 ;                                                               didn't work (last lecture)
+                      00013                 
+                      00014 ;***** Variable Declaration (general purpose registers)
+                      00015 
+                      00016 bank0   macro
+                      00017                         bcf     STATUS,RP0
+                      00018                         bcf     STATUS,RP1
+                      00019                 endm
+                      00020 bank1   macro
+                      00021                         bsf     STATUS,RP0
+                      00022                         bcf     STATUS,RP1
+                      00023                 endm
+                      00024 
+                      00025 PUSH    macro
+                      00026                         movwf   W_TEMP
+                      00027                         swapf   W_TEMP,f
+                      00028                         bank1
+                      00029                         swapf   OPTION_REG,w
+                      00030                         movwf   OPTION_TEMP
+                      00031                         bank0
+                      00032                         swapf   STATUS,w
+                      00033                         movwf   STATUS_TEMP
+                      00034                 endm
+                      00035                 
+                      00036 POP             macro
+                      00037                         swapf   STATUS_TEMP,w
+                      00038                         movwf   STATUS
+                      00039                         bank1
+                      00040                         swapf   OPTION_TEMP,w
+                      00041                         movwf   OPTION_REG
+                      00042                         bank0
+                      00043                         swapf   W_TEMP,w
+                      00044                 endm
+                      00045                 
+                      00046                 cblock  0x20
+  00000020            00047                         STATUS_TEMP             ; temporary variables
+  00000021            00048                         W_TEMP
+MPASM  5.35                          DUTY.ASM   11-11-2014  14:51:50         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+  00000022            00049                         OPTION_TEMP
+  00000023            00050                         temp
+  00000024            00051                         temp1
+  00000025            00052                         count
+  00000026            00053                         count0
+  00000027            00054                         count1
+  00000028            00055                         count2
+                      00056                 endc
+                      00057 
+0000                  00058                 ORG             0x00            ; Reset Vector
+0000   2805           00059                 goto    Mymain          ; vector to main program
+                      00060 
+                      00061 
+0004                  00062                 ORG             0x04            ; Interrupt Vector
+0004   2807           00063                 goto    TMR0_ISR        ; vector to interrup service routine
+                      00064 
+0005                  00065 Mymain
+0005   200C           00066                 call    Init
+0006                  00067 Here
+0006   2806           00068                 goto    Here
+                      00069                 
+                      00070                 
+                      00071 ;***** Timer0 Interrupt Service Routine *****************
+0007                  00072 TMR0_ISR
+                      00073                 ;*** context saving ******
+                      00074                 ;PUSH
+0007   30EE           00075                 movlw   D'238'
+0008   0081           00076                 movwf   TMR0
+                      00077                 ;*** TMR0 ISR begins here ****
+0009   110B           00078                 bcf             INTCON,T0IF
+000A   0986           00079                 comf    PORTB,f
+                      00080                 ;*** context retrieving****
+                      00081                 ;POP
+                      00082                 
+000B   0009           00083                 retfie
+                      00084                 
+                      00085 ;***** Initialization subroutine ************************
+                      00086 
+000C   3007           00087 Init    movlw   .7
+000D   1283 1303      00088                 banksel CMCON
+000F   009F           00089                 movwf   CMCON           ; Disable analog comparator
+0010   1683 1303      00090                 banksel TRISB
+0012   3000           00091                 movlw   0x00
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0013   0086           00092                 movwf   TRISB           ; PORTB are all output
+0014   1283 1303      00093                 banksel PORTB
+                      00094                 ;******************** clear all related registers ********
+0016   0186           00095                 clrf    PORTB
+0017   0185           00096                 clrf    PORTA
+0018   3020           00097                 movlw   0x20            ; the beginning of the general purpose register files
+0019   0084           00098                 movwf   FSR
+001A   0180           00099                 clrf    INDF
+001B   0A84           00100                 incf    FSR,f
+MPASM  5.35                          DUTY.ASM   11-11-2014  14:51:50         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+001C   3080           00101                 movlw   0x80
+001D   0204           00102                 subwf   FSR,w
+001E   1D03           00103                 btfss   STATUS,Z        ; are we at the end of bank0 RAM yet?
+001F   281A           00104                 goto    $-5
+                      00105                 
+                      00106                 ;****************** Timer 0 Initialization **************
+                      00107                 bank1
+0020   1683               M                         bsf     STATUS,RP0
+0021   1303               M                         bcf     STATUS,RP1
+0022   3008           00108                 movlw   b'00001000'     ; yes RBPU, internal clock, PSA to WDT, 1:1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0023   0081           00109                 movwf   OPTION_REG      ; OPTION_REG is in the BANK1 *****
+                      00110                 bank0
+0024   1283               M                         bcf     STATUS,RP0
+0025   1303               M                         bcf     STATUS,RP1
+0026   110B           00111                 bcf             INTCON,T0IF
+0027   168B           00112                 bsf             INTCON,T0IE     ; enable Timer0 interrupt
+0028   178B           00113                 bsf             INTCON,GIE      ; enable global interrupt
+0029   30E7           00114                 movlw   D'231'
+002A   0081           00115                 movwf   TMR0
+002B   0008           00116                 return
+                      00117 ;******* Initialization subroutine **********************
+                      00118 
+                      00119                 
+                      00120                 END
+MPASM  5.35                          DUTY.ASM   11-11-2014  14:51:50         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ADEN                              00000003
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCPR1H                            00000016
+CCPR1L                            00000015
+CIS                               00000003
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000001F
+CMIE                              00000006
+CMIF                              00000006
+CREN                              00000004
+CSRC                              00000007
+DC                                00000001
+EEADR                             0000009B
+EECON1                            0000009C
+EECON2                            0000009D
+EEDATA                            0000009A
+EEIE                              00000007
+EEIF                              00000007
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+GIE                               00000007
+Here                              00000006
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+Init                              0000000C
+Mymain                            00000005
+NOT_BO                            00000000
+NOT_BOD                           00000000
+NOT_BOR                           00000000
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+MPASM  5.35                          DUTY.ASM   11-11-2014  14:51:50         PAGE  5
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+OERR                              00000001
+OPTION_REG                        00000081
+OPTION_TEMP                       00000022
+OSCF                              00000003
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PIE1                              0000008C
+PIR1                              0000000C
+POP                               
+PORTA                             00000005
+PORTB                             00000006
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+PUSH                              
+RBIE                              00000003
+RBIF                              00000000
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+RX9                               00000006
+RX9D                              00000000
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+STATUS                            00000003
+STATUS_TEMP                       00000020
+SYNC                              00000004
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1OSCEN                           00000003
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR0_ISR                          00000007
+TMR1CS                            00000001
+TMR1H                             0000000F
+MPASM  5.35                          DUTY.ASM   11-11-2014  14:51:50         PAGE  6
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISB                             00000086
+TRMT                              00000001
+TX9                               00000006
+TX9D                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+VR0                               00000000
+VR1                               00000001
+VR2                               00000002
+VR3                               00000003
+VRCON                             0000009F
+VREN                              00000007
+VROE                              00000006
+VRR                               00000005
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+W_TEMP                            00000021
+Z                                 00000002
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_BOREN_OFF                        00003FBF
+_BOREN_ON                         00003FFF
+_CP_OFF                           00003FFF
+_CP_ON                            00001FFF
+_DATA_CP_OFF                      00003FFF
+_DATA_CP_ON                       00003EFF
+_ER_OSC_CLKOUT                    00003FFF
+_ER_OSC_NOCLKOUT                  00003FFE
+_EXTCLK_OSC                       00003FEF
+_HS_OSC                           00003FEE
+_INTOSC_OSC_CLKOUT                00003FFD
+_INTOSC_OSC_NOCLKOUT              00003FFC
+_INTRC_OSC_CLKOUT                 00003FFD
+_INTRC_OSC_NOCLKOUT               00003FFC
+_LP_OSC                           00003FEC
+MPASM  5.35                          DUTY.ASM   11-11-2014  14:51:50         PAGE  7
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_MCLRE_OFF                        00003FDF
+_MCLRE_ON                         00003FFF
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC_CLKOUT                    00003FFF
+_RC_OSC_NOCLKOUT                  00003FFE
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FED
+__16F627A                         00000001
+bank0                             
+bank1                             
+count                             00000025
+count0                            00000026
+count1                            00000027
+count2                            00000028
+temp                              00000023
+temp1                             00000024
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : X---XXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXX---- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    41
+Program Memory Words Free:   983
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     2 reported,     0 suppressed
+
+

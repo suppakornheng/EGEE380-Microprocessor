@@ -1,0 +1,4 @@
+Message[302] L:\TMR0 INT\TMR0RB0INT.ASM 25 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] L:\TMR0 INT\TMR0RB0INT.ASM 37 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] L:\TMR0 INT\TMR0RB0INT.ASM 134 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] L:\TMR0 INT\TMR0RB0INT.ASM 151 : Register in operand not in bank 0.  Ensure that bank bits are correct.

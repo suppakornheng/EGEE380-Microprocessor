@@ -1,0 +1,455 @@
+MPASM  5.03                    TMR0RB0INT.ASM   11-6-2014  19:08:58         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;*******************************************
+                      00002 ;**** Program title:  Simple Digital Clock  ***********
+                      00003 ;**** Programmer:                           ***********
+                      00004 ;******************************************
+                      00005 
+                      00006                 PROCESSOR PIC16F627A
+                      00007                 #include <P16F627A.INC>
+                      00001         LIST
+                      00002 ; P16F627A.INC  Standard Header File, Version 1.10    Microchip Technology, Inc.
+                      00265         LIST
+2007   3F78           00008                 __CONFIG        _CP_OFF & _MCLRE_ON & _INTRC_OSC_NOCLKOUT & _LVP_OFF & _WDT_OFF
+                      00009 
+                      00010 ;***** Variable Declaration (general purpose registers)
+                      00011 
+                      00012 bank0   macro
+                      00013                         bcf     STATUS,RP0
+                      00014                         bcf     STATUS,RP1
+                      00015                 endm
+                      00016 bank1   macro
+                      00017                         bsf     STATUS,RP0
+                      00018                         bcf     STATUS,RP1
+                      00019                 endm
+                      00020 
+                      00021 PUSH    macro
+                      00022                         movwf   W_TEMP
+                      00023                         swapf   W_TEMP,f
+                      00024                         bank1
+                      00025                         swapf   OPTION_REG,w
+                      00026                         movwf   OPTION_TEMP
+                      00027                         bank0
+                      00028                         swapf   STATUS,w
+                      00029                         movwf   STATUS_TEMP
+                      00030                 endm
+                      00031                 
+                      00032 POP             macro
+                      00033                         swapf   STATUS_TEMP,w
+                      00034                         movwf   STATUS
+                      00035                         bank1
+                      00036                         swapf   OPTION_TEMP,w
+                      00037                         movwf   OPTION_REG
+                      00038                         bank0
+                      00039                         swapf   W_TEMP,w
+                      00040                 endm
+                      00041                 
+                      00042                 cblock  0x20
+  00000020            00043                         STATUS_TEMP             ; temporary variables
+  00000021            00044                         W_TEMP
+  00000022            00045                         OPTION_TEMP
+  00000023            00046                         temp
+  00000024            00047                         temp1
+  00000025            00048                         count
+  00000026            00049                         count0
+  00000027            00050                         count1
+MPASM  5.03                    TMR0RB0INT.ASM   11-6-2014  19:08:58         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+  00000028            00051                         count2
+                      00052                 endc
+                      00053 
+0000                  00054                 ORG             0x00            ; Reset Vector
+0000   2805           00055                 goto    Mymain          ; vector to main program
+                      00056 
+                      00057 
+0004                  00058                 ORG             0x04            ; Interrupt Vector
+0004   2808           00059                 goto    ISR                     ; vector to interrupt service routine
+                      00060 
+0005                  00061 Mymain
+0005   2037           00062                 call    Init
+0006                  00063 Here
+0006   0801           00064                 movf    TMR0,w
+0007   2806           00065                 goto    Here
+                      00066                 
+                      00067                 
+                      00068 ;***** Timer0 and RB0/INT Interrupt Service Routine *****************
+0008                  00069 ISR
+                      00070                 ;*** context saving ******
+                      00071                 PUSH
+0008   00A1               M                         movwf   W_TEMP
+0009   0EA1               M                         swapf   W_TEMP,f
+                          M                         bank1
+000A   1683               M                         bsf     STATUS,RP0
+000B   1303               M                         bcf     STATUS,RP1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+000C   0E01               M                         swapf   OPTION_REG,w
+000D   00A2               M                         movwf   OPTION_TEMP
+                          M                         bank0
+000E   1283               M                         bcf     STATUS,RP0
+000F   1303               M                         bcf     STATUS,RP1
+0010   0E03               M                         swapf   STATUS,w
+0011   00A0               M                         movwf   STATUS_TEMP
+                      00072                 
+0012   188B           00073                 btfsc   INTCON,INTF
+0013   2817           00074                 goto    RB0INT_ISR
+                      00075                 
+0014   190B           00076                 btfsc   INTCON,T0IF
+0015   281E           00077                 goto    TMR0_ISR
+                      00078                 
+0016   282C           00079                 goto    ISR_EXIT
+                      00080                 
+0017                  00081 RB0INT_ISR
+                      00082                 ;*** RB0/INT ISR begins here ***
+0017   108B           00083                 bcf             INTCON,INTF
+0018   1C86           00084                 btfss   PORTB,1
+0019   281C           00085                 goto    LED1_ON
+001A                  00086 LED1_OFF
+001A   1086           00087                 bcf             PORTB,1
+001B   281D           00088                 goto    DONE1
+001C                  00089 LED1_ON 
+001C   1486           00090                 bsf             PORTB,1
+MPASM  5.03                    TMR0RB0INT.ASM   11-6-2014  19:08:58         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+001D                  00091 DONE1           
+001D   282C           00092                 goto    ISR_EXIT
+                      00093                 
+                      00094 
+001E                  00095 TMR0_ISR
+                      00096                 ;*** TMR0 ISR begins here ****
+001E   110B           00097                 bcf             INTCON,T0IF
+001F   138B           00098                 bcf             INTCON,GIE              ; disable global interrupt
+0020   0AA5           00099                 incf    count,f         ; increment system tick every 65.536 ms
+                      00100                 
+                      00101 
+0021   300F           00102                 movlw   .15
+0022   0225           00103                 subwf   count,w         ; check sys_tick = 15? (15x65.536ms = 1S)
+0023   1D03           00104                 btfss   STATUS,Z
+0024   282C           00105                 goto    ISR_EXIT
+                      00106                 ;comf   PORTB,f
+0025   1F86           00107                 btfss   PORTB,7
+0026   2829           00108                 goto    LED_ON
+0027                  00109 LED_OFF
+0027   1386           00110                 bcf             PORTB,7
+0028   282A           00111                 goto    DONE
+0029                  00112 LED_ON  
+0029   1786           00113                 bsf             PORTB,7
+002A                  00114 DONE
+                      00115                 
+002A   0103           00116                 clrw
+002B   00A5           00117                 movwf   count
+                      00118                 
+002C                  00119 ISR_EXIT
+002C   178B           00120                 bsf             INTCON,GIE              ; re-enable global interrupt
+                      00121 
+                      00122                 ;*** context retrieving****
+                      00123                 POP
+002D   0E20               M                         swapf   STATUS_TEMP,w
+002E   0083               M                         movwf   STATUS
+                          M                         bank1
+002F   1683               M                         bsf     STATUS,RP0
+0030   1303               M                         bcf     STATUS,RP1
+0031   0E22               M                         swapf   OPTION_TEMP,w
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0032   0081               M                         movwf   OPTION_REG
+                          M                         bank0
+0033   1283               M                         bcf     STATUS,RP0
+0034   1303               M                         bcf     STATUS,RP1
+0035   0E21               M                         swapf   W_TEMP,w
+                      00124                 
+0036   0009           00125                 retfie
+                      00126                 
+                      00127 ;***** Initialization subroutine ************************
+                      00128 
+0037   3007           00129 Init    movlw   .7
+0038   1283 1303      00130                 banksel CMCON
+003A   009F           00131                 movwf   CMCON           ; Disable analog comparator
+MPASM  5.03                    TMR0RB0INT.ASM   11-6-2014  19:08:58         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+003B   1683 1303      00132                 banksel TRISB
+003D   3001           00133                 movlw   B'00000001'
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+003E   0086           00134                 movwf   TRISB           ; PORTB are all output except RB0
+003F   1283 1303      00135                 banksel PORTB
+                      00136                 ;******************** clear all related registers ********
+0041   0186           00137                 clrf    PORTB
+0042   0185           00138                 clrf    PORTA
+0043   3020           00139                 movlw   0x20            ; the beginning of the general purpose register files
+0044   0084           00140                 movwf   FSR
+0045   0180           00141                 clrf    INDF
+0046   0A84           00142                 incf    FSR,f
+0047   3080           00143                 movlw   0x80
+0048   0204           00144                 subwf   FSR,w
+0049   1D03           00145                 btfss   STATUS,Z        ; are we at the end of bank0 RAM yet?
+004A   2845           00146                 goto    $-5
+                      00147                 
+                      00148                 ;****************** Timer 0 Initialization **************
+004B   3087           00149                 movlw   b'10000111'     ; no RBPU, internal clock, PSA to timer0, 1:256, RB0INT falling 
+                            edge
+                      00150                 bank1
+004C   1683               M                         bsf     STATUS,RP0
+004D   1303               M                         bcf     STATUS,RP1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+004E   0081           00151                 movwf   OPTION_REG      ; OPTION_REG is in the BANK1 *****
+                      00152                 bank0
+004F   1283               M                         bcf     STATUS,RP0
+0050   1303               M                         bcf     STATUS,RP1
+0051   110B           00153                 bcf             INTCON,T0IF
+0052   168B           00154                 bsf             INTCON,T0IE     ; enable Timer0 interrupt
+                      00155                 
+0053   108B           00156                 bcf             INTCON,INTF
+0054   160B           00157                 bsf             INTCON,INTE     ; enable RB0/INT interrupt
+                      00158                 
+0055   178B           00159                 bsf             INTCON,GIE      ; enable global interrupt
+0056   0181           00160                 clrf    TMR0
+0057   0008           00161                 return
+                      00162 ;******* Initialization subroutine **********************
+                      00163 
+                      00164                 
+                      00165                 END
+MPASM  5.03                    TMR0RB0INT.ASM   11-6-2014  19:08:58         PAGE  5
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ADEN                              00000003
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCPR1H                            00000016
+CCPR1L                            00000015
+CIS                               00000003
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000001F
+CMIE                              00000006
+CMIF                              00000006
+CREN                              00000004
+CSRC                              00000007
+DC                                00000001
+DONE                              0000002A
+DONE1                             0000001D
+EEADR                             0000009B
+EECON1                            0000009C
+EECON2                            0000009D
+EEDATA                            0000009A
+EEIE                              00000007
+EEIF                              00000007
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+GIE                               00000007
+Here                              00000006
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+ISR                               00000008
+ISR_EXIT                          0000002C
+Init                              00000037
+LED1_OFF                          0000001A
+LED1_ON                           0000001C
+LED_OFF                           00000027
+MPASM  5.03                    TMR0RB0INT.ASM   11-6-2014  19:08:58         PAGE  6
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+LED_ON                            00000029
+Mymain                            00000005
+NOT_BO                            00000000
+NOT_BOD                           00000000
+NOT_BOR                           00000000
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+OERR                              00000001
+OPTION_REG                        00000081
+OPTION_TEMP                       00000022
+OSCF                              00000003
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PIE1                              0000008C
+PIR1                              0000000C
+POP                               
+PORTA                             00000005
+PORTB                             00000006
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+PUSH                              
+RB0INT_ISR                        00000017
+RBIE                              00000003
+RBIF                              00000000
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+RX9                               00000006
+RX9D                              00000000
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+STATUS                            00000003
+STATUS_TEMP                       00000020
+SYNC                              00000004
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+MPASM  5.03                    TMR0RB0INT.ASM   11-6-2014  19:08:58         PAGE  7
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+T1CON                             00000010
+T1OSCEN                           00000003
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR0_ISR                          0000001E
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISB                             00000086
+TRMT                              00000001
+TX9                               00000006
+TX9D                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+VR0                               00000000
+VR1                               00000001
+VR2                               00000002
+VR3                               00000003
+VRCON                             0000009F
+VREN                              00000007
+VROE                              00000006
+VRR                               00000005
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+W_TEMP                            00000021
+Z                                 00000002
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_BOREN_OFF                        00003FBF
+_BOREN_ON                         00003FFF
+_CP_OFF                           00003FFF
+_CP_ON                            00001FFF
+_DATA_CP_OFF                      00003FFF
+_DATA_CP_ON                       00003EFF
+MPASM  5.03                    TMR0RB0INT.ASM   11-6-2014  19:08:58         PAGE  8
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_ER_OSC_CLKOUT                    00003FFF
+_ER_OSC_NOCLKOUT                  00003FFE
+_EXTCLK_OSC                       00003FEF
+_HS_OSC                           00003FEE
+_INTOSC_OSC_CLKOUT                00003FFD
+_INTOSC_OSC_NOCLKOUT              00003FFC
+_INTRC_OSC_CLKOUT                 00003FFD
+_INTRC_OSC_NOCLKOUT               00003FFC
+_LP_OSC                           00003FEC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_MCLRE_OFF                        00003FDF
+_MCLRE_ON                         00003FFF
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_RC_OSC_CLKOUT                    00003FFF
+_RC_OSC_NOCLKOUT                  00003FFE
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FED
+__16F627A                         00000001
+bank0                             
+bank1                             
+count                             00000025
+count0                            00000026
+count1                            00000027
+count2                            00000028
+temp                              00000023
+temp1                             00000024
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : X---XXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX
+0040 : XXXXXXXXXXXXXXXX XXXXXXXX-------- ---------------- ----------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    85
+Program Memory Words Free:   939
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     4 reported,     0 suppressed
+
+

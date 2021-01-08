@@ -1,0 +1,7 @@
+Warning[207] C:\EE380\INT_TOG_LED\INT_TOG_LED.ASM 26 : Found label after column 1. (PUSH)
+Warning[207] C:\EE380\INT_TOG_LED\INT_TOG_LED.ASM 37 : Found label after column 1. (POP)
+Message[302] C:\EE380\INT_TOG_LED\INT_TOG_LED.ASM 54 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\EE380\INT_TOG_LED\INT_TOG_LED.ASM 55 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\EE380\INT_TOG_LED\INT_TOG_LED.ASM 69 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\EE380\INT_TOG_LED\INT_TOG_LED.ASM 30 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\EE380\INT_TOG_LED\INT_TOG_LED.ASM 42 : Register in operand not in bank 0.  Ensure that bank bits are correct.

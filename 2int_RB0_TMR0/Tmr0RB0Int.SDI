@@ -1,0 +1,192 @@
+,,,;*******************************************
+,,,;**** Program title:  Simple Digital Clock  ***********
+,,,;**** Programmer:                           ***********
+,,,;******************************************
+,,,
+,,,                PROCESSOR PIC16F627A
+,,,                #include <P16F627A.INC>
+00002007,3F78,,                __CONFIG        _CP_OFF & _MCLRE_ON & _INTRC_OSC_NOCLKOUT & _LVP_OFF & _WDT_OFF
+,,,
+,,,;***** Variable Declaration (general purpose registers)
+,,,
+,,,bank0   macro
+,,,                        bcf     STATUS,RP0
+,,,                        bcf     STATUS,RP1
+,,,                endm
+,,,bank1   macro
+,,,                        bsf     STATUS,RP0
+,,,                        bcf     STATUS,RP1
+,,,                endm
+,,,
+,,,PUSH    macro
+,,,                        movwf   W_TEMP
+,,,                        swapf   W_TEMP,f
+,,,                        bank1
+,,,                        swapf   OPTION_REG,w
+,,,                        movwf   OPTION_TEMP
+,,,                        bank0
+,,,                        swapf   STATUS,w
+,,,                        movwf   STATUS_TEMP
+,,,                endm
+,,,
+,,,POP             macro
+,,,                        swapf   STATUS_TEMP,w
+,,,                        movwf   STATUS
+,,,                        bank1
+,,,                        swapf   OPTION_TEMP,w
+,,,                        movwf   OPTION_REG
+,,,                        bank0
+,,,                        swapf   W_TEMP,w
+,,,                endm
+,,,
+,,,                cblock  0x20
+,,,                        STATUS_TEMP             ; temporary variables
+,,,                        W_TEMP
+,,,                        OPTION_TEMP
+,,,                        temp
+,,,                        temp1
+,,,                        count
+,,,                        count0
+,,,                        count1
+,,,                        count2
+,,,                endc
+,,,
+00000000,,,                ORG             0x00            ; Reset Vector
+00000000,2805,,                goto    Mymain          ; vector to main program
+,,,
+,,,
+00000004,,,                ORG             0x04            ; Interrupt Vector
+00000004,2808,,                goto    ISR                     ; vector to interrupt service routine
+,,,
+00000005,,Mymain,Mymain
+00000005,2037,,                call    Init
+00000006,,Here,Here
+00000006,0801,,                movf    TMR0,w
+00000007,2806,,                goto    Here
+,,,
+,,,
+,,,;***** Timer0 and RB0/INT Interrupt Service Routine *****************
+00000008,,ISR,ISR
+,,,                ;*** context saving ******
+,,,                PUSH
+00000008,00A1,,                        - movwf   W_TEMP
+00000009,0EA1,,                        - swapf   W_TEMP,f
+,,,                        - bank1
+0000000A,1683,,                        - bsf     STATUS,RP0
+0000000B,1303,,                        - bcf     STATUS,RP1
+0000000C,0E01,,                        - swapf   OPTION_REG,w
+0000000D,00A2,,                        - movwf   OPTION_TEMP
+,,,                        - bank0
+0000000E,1283,,                        - bcf     STATUS,RP0
+0000000F,1303,,                        - bcf     STATUS,RP1
+00000010,0E03,,                        - swapf   STATUS,w
+00000011,00A0,,                        - movwf   STATUS_TEMP
+,,,
+00000012,188B,,                btfsc   INTCON,INTF
+00000013,2817,,                goto    RB0INT_ISR
+,,,
+00000014,190B,,                btfsc   INTCON,T0IF
+00000015,281E,,                goto    TMR0_ISR
+,,,
+00000016,282C,,                goto    ISR_EXIT
+,,,
+00000017,,RB0INT_ISR,RB0INT_ISR
+,,,                ;*** RB0/INT ISR begins here ***
+00000017,108B,,                bcf             INTCON,INTF
+00000018,1C86,,                btfss   PORTB,1
+00000019,281C,,                goto    LED1_ON
+0000001A,,LED1_OFF,LED1_OFF
+0000001A,1086,,                bcf             PORTB,1
+0000001B,281D,,                goto    DONE1
+0000001C,,LED1_ON,LED1_ON
+0000001C,1486,,                bsf             PORTB,1
+0000001D,,DONE1,DONE1
+0000001D,282C,,                goto    ISR_EXIT
+,,,
+,,,
+0000001E,,TMR0_ISR,TMR0_ISR
+,,,                ;*** TMR0 ISR begins here ****
+0000001E,110B,,                bcf             INTCON,T0IF
+0000001F,138B,,                bcf             INTCON,GIE              ; disable global interrupt
+00000020,0AA5,,                incf    count,f         ; increment system tick every 65.536 ms
+,,,
+,,,
+00000021,300F,,                movlw   .15
+00000022,0225,,                subwf   count,w         ; check sys_tick = 15? (15x65.536ms = 1S)
+00000023,1D03,,                btfss   STATUS,Z
+00000024,282C,,                goto    ISR_EXIT
+,,,                ;comf   PORTB,f
+00000025,1F86,,                btfss   PORTB,7
+00000026,2829,,                goto    LED_ON
+00000027,,LED_OFF,LED_OFF
+00000027,1386,,                bcf             PORTB,7
+00000028,282A,,                goto    DONE
+00000029,,LED_ON,LED_ON
+00000029,1786,,                bsf             PORTB,7
+0000002A,,DONE,DONE
+,,,
+0000002A,0103,,                clrw
+0000002B,00A5,,                movwf   count
+,,,
+0000002C,,ISR_EXIT,ISR_EXIT
+0000002C,178B,,                bsf             INTCON,GIE              ; re-enable global interrupt
+,,,
+,,,                ;*** context retrieving****
+,,,                POP
+0000002D,0E20,,                        - swapf   STATUS_TEMP,w
+0000002E,0083,,                        - movwf   STATUS
+,,,                        - bank1
+0000002F,1683,,                        - bsf     STATUS,RP0
+00000030,1303,,                        - bcf     STATUS,RP1
+00000031,0E22,,                        - swapf   OPTION_TEMP,w
+00000032,0081,,                        - movwf   OPTION_REG
+,,,                        - bank0
+00000033,1283,,                        - bcf     STATUS,RP0
+00000034,1303,,                        - bcf     STATUS,RP1
+00000035,0E21,,                        - swapf   W_TEMP,w
+,,,
+00000036,0009,,                retfie
+,,,
+,,,;***** Initialization subroutine ************************
+,,,
+00000037,3007,Init,Init    movlw   .7
+00000038,1283 1303,,                banksel CMCON
+0000003A,009F,,                movwf   CMCON           ; Disable analog comparator
+0000003B,1683 1303,,                banksel TRISB
+0000003D,3001,,                movlw   B'00000001'
+0000003E,0086,,                movwf   TRISB           ; PORTB are all output except RB0
+0000003F,1283 1303,,                banksel PORTB
+,,,                ;******************** clear all related registers ********
+00000041,0186,,                clrf    PORTB
+00000042,0185,,                clrf    PORTA
+00000043,3020,,                movlw   0x20            ; the beginning of the general purpose register files
+00000044,0084,,                movwf   FSR
+00000045,0180,,                clrf    INDF
+00000046,0A84,,                incf    FSR,f
+00000047,3080,,                movlw   0x80
+00000048,0204,,                subwf   FSR,w
+00000049,1D03,,                btfss   STATUS,Z        ; are we at the end of bank0 RAM yet?
+0000004A,2845,,                goto    $-5
+,,,
+,,,                ;****************** Timer 0 Initialization **************
+0000004B,3087,,                movlw   b'10000111'     ; no RBPU, internal clock, PSA to timer0, 1:256, RB0INT falling
+,,,                bank1
+0000004C,1683,,                        - bsf     STATUS,RP0
+0000004D,1303,,                        - bcf     STATUS,RP1
+0000004E,0081,,                movwf   OPTION_REG      ; OPTION_REG is in the BANK1 *****
+,,,                bank0
+0000004F,1283,,                        - bcf     STATUS,RP0
+00000050,1303,,                        - bcf     STATUS,RP1
+00000051,110B,,                bcf             INTCON,T0IF
+00000052,168B,,                bsf             INTCON,T0IE     ; enable Timer0 interrupt
+,,,
+00000053,108B,,                bcf             INTCON,INTF
+00000054,160B,,                bsf             INTCON,INTE     ; enable RB0/INT interrupt
+,,,
+00000055,178B,,                bsf             INTCON,GIE      ; enable global interrupt
+00000056,0181,,                clrf    TMR0
+00000057,0008,,                return
+,,,;******* Initialization subroutine **********************
+,,,
+,,,
+,,,                END

@@ -1,0 +1,45 @@
+,,,  2SWITCH2LED.ASM   9-22-2020  16:23:16         PAGE  1
+,,,;*******************************************
+,,,;**** Program title: Running LED ***********
+,,,;**** Programmer: Mr. Chatchai   ***********
+,,,;*******************************************
+,,,                PROCESSOR PIC16F628
+,,,                #include <P16F628.INC>
+00002007,3F78,,                __CONFIG        _CP_OFF & _MCLRE_ON & _INTRC_OSC_NOCLKOUT & _LVP_OFF & _WDT_OFF
+,,,
+,,,;Declare File register
+,,,
+00000000,,,                ORG     0x00    ; reset vector
+00000000,2804,,                GOTO START      ; jump to start of the program
+,,,
+00000004,,,                ORG     0x04    ; Interrupt vector
+,,,
+00000004,,START:,START:  ; Port Configuration
+00000004,3007,,                MOVLW   .7                      ; B'0111'
+00000005,009F,,                MOVWF   CMCON           ; set CMCON=7 to set portA to Digital mode
+00000006,1303,,                BCF             STATUS,RP1      ; or 'BCF 0x03,0x06'
+00000007,1683,,                BSF             STATUS,RP0      ; Select Bank1
+00000008,1405,,                BSF             TRISA,0         ; Port RA0 is an Input pin
+00000009,1485,,                BSF             TRISA,1         ; Port RA1 is an Input pin
+0000000A,1006,,                BCF             TRISB,0         ; Port RB0 is an output pin
+0000000B,1086,,                BCF             TRISB,1         ; Port RB1 is an output pin
+0000000C,1283,,                BCF             STATUS,RP0      ; Back to Bank0
+,,,
+,,,                ; Start your program here
+0000000D,,Inf_loop:,Inf_loop:
+0000000D,1885,,                BTFSC   PORTA,1         ; Test switch R1
+0000000E,2814,,                GOTO    K1_PRESSED      ; If R1 is pressed
+0000000F,1805,,                BTFSC   PORTA,0         ; Test switch K2
+00000010,2816,,                GOTO    K2_PRESSED      ; if R2 is pressed
+00000011,1406,,                BSF             PORTB,0         ; OFF LED2 = LED ACTIVE LOW >> off use BSF (if LED is ac
+00000012,1486,,                BSF             PORTB,1         ; OFF LED1
+00000013,280D,,                GOTO    Inf_loop
+00000014,,K1_PRESSED:,K1_PRESSED:
+00000014,1086,,                BCF             PORTB,1         ; ON LED1 = LED ACTIVE LOw >> on use BCF
+00000015,280D,,                GOTO    Inf_loop
+,,,
+00000016,,K2_PRESSED:,K2_PRESSED:
+00000016,1006,,                BCF             PORTB,0         ; ON LED 2
+00000017,280D,,                GOTO    Inf_loop
+,,,
+,,,                END

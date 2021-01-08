@@ -1,0 +1,358 @@
+MPASM  5.03                   INT_TOG_LED.ASM   11-10-2020  16:06:16         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;*******************************************
+                      00002 ;int_tog_led interrupt toggle led
+                      00003 ;*******************************************
+                      00004                 PROCESSOR PIC16F628
+                      00005                 #include <P16F628.INC>
+                      00001         LIST
+                      00002 ; P16F628.INC  Standard Header File, Version 1.01    Microchip Technology, Inc.
+                      00261         LIST
+2007   3F4A           00006                 __CONFIG        _CP_OFF & _MCLRE_OFF & _HS_OSC & _LVP_OFF & _WDT_OFF
+                      00007 
+                      00008                 cblock  0x20
+  00000020            00009                         temp
+  00000021            00010                         temp1
+  00000022            00011                         count
+  00000023            00012                         count0
+  00000024            00013                         count1
+  00000025            00014                         count2
+  00000026            00015                         w_temp
+  00000027            00016                         OPTION_REG_temp
+  00000028            00017                         STATUS_temp
+                      00018                 endc
+0000                  00019                 ORG 0x00                ;reset vector
+0000   2805           00020                 goto main
+                      00021         
+0004                  00022                 ORG     0x04            ;interrupt vector
+0004   281A           00023                 goto EXT_ISR            ;exit Interrupt Service Routine
+                      00024 
+                      00025 ;---push pop--- 
+Warning[207]: Found label after column 1. (PUSH)
+                      00026                 PUSH    MACRO
+                      00027                 movwf   w_temp          ;       w_temp = w
+                      00028                 swapf   w_temp,f        ;       swap them, ใช้ swap เพราะ movf มีโ
+                            อกาสที่จะไปเปลี่ยน zero flag ใน status register
+                      00029                 banksel TRISA           ;       select bank1
+                      00030                 swapf   OPTION_REG,w;   w= OPTION_REG
+                      00031                 movwf   OPTION_REG_temp;OPTION_REG_temp= w
+                      00032                 banksel PORTA           ;       select bank0
+                      00033                 swapf   STATUS,W        ;       w= STATUS
+                      00034                 MOVWF   STATUS_temp     ;       STATUS_temp= w
+                      00035                 ENDM
+                      00036 
+Warning[207]: Found label after column 1. (POP)
+                      00037                 POP     MACRO                           
+                      00038                 SWAPF   STATUS_temp,w
+                      00039                 MOVWF   STATUS
+                      00040                 banksel TRISA           ;       select bank1
+                      00041                 swapf   OPTION_REG_temp,w
+                      00042                 movwf   OPTION_REG
+                      00043                 banksel PORTA           ;       select bank0
+                      00044                 swapf   w_temp,w
+                      00045                 ENDM            
+                      00046 ;---end push pop---             
+                      00047 
+MPASM  5.03                   INT_TOG_LED.ASM   11-10-2020  16:06:16         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0005                  00048 main:
+                      00049                 ;---Port Config---
+0005   3007           00050                 movlw   .7
+0006   1283 1303      00051                 banksel CMCON           ; select Bank0 (CMCON อยู่ Bank0)
+0008   009F           00052                 movwf   CMCON           ; Disable analog comparator
+0009   1683 1303      00053                 banksel TRISB           ; select Bank1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+000B   1005           00054                 bcf             TRISA,0         ; Port RA0 is an output pin
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+000C   1406           00055                 bsf             TRISB,0         ; Port RB0 is an input pin
+000D   1283 1303      00056                 banksel PORTB           ; select Bank0
+                      00057                 ;---End Port Config---
+                      00058                 ;---Interrupt Config---
+000F   178B           00059                 bsf             INTCON,GIE      ; enable global interrupt
+0010   160B           00060                 bsf             INTCON,INTE     ; enable external interrupt, INT = external interrupt, E
+                            =enable
+0011   108B           00061                 bcf             INTCON,INTF     ; clear external interrupt flag , F = flag
+                      00062                 ;; Or using movlw instead of bsf, bcf
+                      00063                 ;;       BIT: 7654 3219 
+                      00064                 ;movlw  B'1001 0000'; GIE(bit7), INTE(bit4)
+                      00065                 ;movwf  INTCON          ;
+                      00066                 ;---End Interrupt Config---
+                      00067                 ;---Option Config---
+0012   1683 1303      00068                 banksel OPTION_REG
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0014   1301           00069                 bcf             OPTION_REG,INTEDG; INTEDG=0 interrupt on falling edge of RB0/INT pin
+                      00070                 ;bsf    OPTION_REG,INTEDG; INTEDG=1 interrupt on rising edge of RB0/INT pin
+                      00071                 ;---End Option Config---
+0015   1283 1303      00072                 banksel PORTA           ; select Bank0 (can use CMCON instead of PORTA)
+                      00073                 
+0017   0186           00074                 clrf    PORTB
+0018   3001           00075                 movlw   .1
+0019   00A0           00076                 movwf   temp            ; temp=1
+                      00077                 
+                      00078 
+                      00079 ;---interrupt---        
+001A                  00080 EXT_ISR:
+                      00081                 PUSH
+001A   00A6               M                 movwf   w_temp          ;       w_temp = w
+001B   0EA6               M                 swapf   w_temp,f        ;       swap them, ใช้ swap เพราะ movf มีโ
+                            อกาสที่จะไปเปลี่ยน zero flag ใน status register
+001C   1683 1303          M                 banksel TRISA           ;       select bank1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+001E   0E01               M                 swapf   OPTION_REG,w;   w= OPTION_REG
+001F   00A7               M                 movwf   OPTION_REG_temp;OPTION_REG_temp= w
+0020   1283 1303          M                 banksel PORTA           ;       select bank0
+0022   0E03               M                 swapf   STATUS,W        ;       w= STATUS
+0023   00A8               M                 MOVWF   STATUS_temp     ;       STATUS_temp= w
+0024   108B           00082                 bcf             INTCON,INTF
+0025   1C05           00083                 btfss   PORTA,0
+0026   2829           00084                 goto    SET_ON
+0027                  00085 SET_OFF:
+0027   1005           00086                 bcf             PORTA,0
+MPASM  5.03                   INT_TOG_LED.ASM   11-10-2020  16:06:16         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0028   282A           00087                 goto    SET_DONE
+0029   1405           00088 SET_ON: bsf             PORTA,0
+002A                  00089 SET_DONE:
+                      00090                 POP
+002A   0E28               M                 SWAPF   STATUS_temp,w
+002B   0083               M                 MOVWF   STATUS
+002C   1683 1303          M                 banksel TRISA           ;       select bank1
+002E   0E27               M                 swapf   OPTION_REG_temp,w
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+002F   0081               M                 movwf   OPTION_REG
+0030   1283 1303          M                 banksel PORTA           ;       select bank0
+0032   0E26               M                 swapf   w_temp,w
+0033   0009           00091                 RETFIE
+                      00092 ;---end interrupt---    
+                      00093 
+                      00094 
+                      00095 
+                      00096                 END
+MPASM  5.03                   INT_TOG_LED.ASM   11-10-2020  16:06:16         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ADEN                              00000003
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCPR1H                            00000016
+CCPR1L                            00000015
+CIS                               00000003
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000001F
+CMIE                              00000006
+CMIF                              00000006
+CREN                              00000004
+CSRC                              00000007
+DC                                00000001
+EEADR                             0000009B
+EECON1                            0000009C
+EECON2                            0000009D
+EEDATA                            0000009A
+EEIE                              00000007
+EEIF                              00000007
+EXT_ISR                           0000001A
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+NOT_BO                            00000000
+NOT_BOD                           00000000
+NOT_BOR                           00000000
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+MPASM  5.03                   INT_TOG_LED.ASM   11-10-2020  16:06:16         PAGE  5
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+OERR                              00000001
+OPTION_REG                        00000081
+OPTION_REG_temp                   00000027
+OSCF                              00000003
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PIE1                              0000008C
+PIR1                              0000000C
+POP                               
+PORTA                             00000005
+PORTB                             00000006
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+PUSH                              
+RBIE                              00000003
+RBIF                              00000000
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+RX9                               00000006
+RX9D                              00000000
+SET_DONE                          0000002A
+SET_OFF                           00000027
+SET_ON                            00000029
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+STATUS                            00000003
+STATUS_temp                       00000028
+SYNC                              00000004
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1OSCEN                           00000003
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR1CS                            00000001
+TMR1H                             0000000F
+MPASM  5.03                   INT_TOG_LED.ASM   11-10-2020  16:06:16         PAGE  6
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISB                             00000086
+TRMT                              00000001
+TX9                               00000006
+TX9D                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+VR0                               00000000
+VR1                               00000001
+VR2                               00000002
+VR3                               00000003
+VRCON                             0000009F
+VREN                              00000007
+VROE                              00000006
+VRR                               00000005
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_CP_50                            00002BFF
+_CP_75                            000017FF
+_CP_ALL                           000003FF
+_CP_OFF                           00003FFF
+_DATA_CP_OFF                      00003FFF
+_DATA_CP_ON                       00003EFF
+_ER_OSC_CLKOUT                    00003FFF
+_ER_OSC_NOCLKOUT                  00003FFE
+_EXTCLK_OSC                       00003FEF
+_HS_OSC                           00003FEE
+_INTRC_OSC_CLKOUT                 00003FFD
+_INTRC_OSC_NOCLKOUT               00003FFC
+_LP_OSC                           00003FEC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_MCLRE_OFF                        00003FDF
+MPASM  5.03                   INT_TOG_LED.ASM   11-10-2020  16:06:16         PAGE  7
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_MCLRE_ON                         00003FFF
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FED
+__16F628                          00000001
+count                             00000022
+count0                            00000023
+count1                            00000024
+count2                            00000025
+main                              00000005
+temp                              00000020
+temp1                             00000021
+w_temp                            00000026
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : X---XXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXX------------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    49
+Program Memory Words Free:  1999
+
+
+Errors   :     0
+Warnings :     2 reported,     0 suppressed
+Messages :     5 reported,     0 suppressed
+
+

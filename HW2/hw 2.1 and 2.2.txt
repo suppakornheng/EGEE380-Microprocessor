@@ -1,0 +1,30 @@
+Simple Computer 
+HW2.1 up even odd counter.txt
+JMP=00	JC=01	OUT=10
+		addr		data		bin		hex
+start	0000		JC  odd		01 0101		15
+		0001		out 2		10 0010		22
+		0010		out 4		10 0100		24
+		0011		out 6		10 0110		26
+		0100		jmp start	00 0000		00
+odd		0101		out 1		10 0001		21
+		0110		out 3		10 0011		23
+		0111		out 5		10 0101		25
+		1000		jmp start	00 0000		00
+---------------------------------------------------------
+HW2.2 up even odd counter.txt
+JMP=00	JC=01	OUT=10
+		addr		data		bin		hex
+start	0000		JC 0011		01 0011		13
+		0001		OUT 2		10 0010		22
+		0010		JMP 0100	00 0100		04
+		0011		OUT 1		10 0001		21
+		0100		JC 0111		01 0111		17
+		0101		OUT 4		10 0100		24
+		0110		JMP 1000	00 1000		08
+		0111		OUT 3		10 0011		23
+		1000		JC 1011		01 1011		1B
+		1001		OUT 6		10 0110		26
+		1010		JMP START	00 0000		00
+		1011		OUT 5		10 0101		25
+		1100		JMP START	00 0000		00

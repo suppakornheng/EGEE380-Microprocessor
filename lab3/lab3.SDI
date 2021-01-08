@@ -1,0 +1,95 @@
+,,,;*******************************************
+,,,;**** Program title:  Running LEDS  ********
+,,,;**** Programmer: Mr. Chatchai   ***********
+,,,;*******************************************
+,,,
+,,,                PROCESSOR PIC16F628
+,,,                #include <P16F628.INC>
+00002007,3F58,,                __CONFIG        _CP_OFF & _MCLRE_OFF & _INTRC_OSC_NOCLKOUT & _LVP_OFF & _WDT_OFF
+,,,
+,,,;****** Define general purpose registers for temporary variables
+,,,                cblock  0x20
+,,,                        temp
+,,,                        temp1
+,,,                        count
+,,,                        count0
+,,,                        count1
+,,,                        count2
+,,,                endc
+,,,;***********************************************************
+00000000,,,                ORG     0x00            ; Reset Vector
+,,,
+00000000,1683 1303,,                banksel TRISB   ; Switch to bank1
+00000002,0103,,                clrw
+00000003,0086,,                movwf   TRISB   ; Make PortB an output port
+00000004,1283 1303,,                banksel PORTB   ; Switch back to bank0
+00000006,0086,,                movwf   PORTB   ; Turn-off all LEDS
+,,,
+00000007,,Main_loop:,Main_loop:                      ; Main loop begins here
+00000007,3000,,                movlw   0x00    ; clear file register 'temp'
+00000008,00A0,,                movwf   temp
+00000009,,Again:,Again:                                  ; repeat this loop 8 times
+00000009,0820,,                movf    temp,w          ; use 'temp' to get a LED pattern from
+0000000A,2013,,                call    LED_PATTERN     ; LED_PATTERN look-up table
+0000000B,0086,,                movwf   PORTB           ; move the obtained LED pattern to PORTB
+0000000C,201C,,                call    Delay800mS      ; Delay for 0.8 second
+,,,
+0000000D,0AA0,,                incf    temp,f          ; increment 'temp' by one
+,,,
+0000000E,0820,,                movf    temp,w
+0000000F,3C08,,                sublw   .8              ; check if [temp] == 8 ?
+00000010,1D03,,                btfss   STATUS,Z
+00000011,2809,,                goto    Again           ; if 'no' repeat this loop again
+00000012,2807,,                goto    Main_loop       ; if 'yes' clear 'temp' back to zero
+,,,
+,,,
+,,,;******************** Subroutines *****************************
+,,,
+,,,;========================================================
+,,,;* Running LED patterns using a look-up table
+,,,;========================================================
+00000013,,LED_PATTERN:,LED_PATTERN:
+00000013,0782,,                addwf   PCL,F
+00000014,3400,,                retlw   B'00000000'             ; Pattern 0
+00000015,3481,,                retlw   B'10000001'             ; Pattern 1
+00000016,3442,,                retlw   B'01000010'
+00000017,3424,,                retlw   B'00100100'
+00000018,3418,,                retlw   B'00011000'
+00000019,3424,,                retlw   B'00100100'
+0000001A,3442,,                retlw   B'01000010'
+0000001B,3481,,                retlw   B'10000001'             ; Pattern 7
+,,,
+,,,;========================================================
+,,,; Delay subroutine for 0.8 second = 800000uS = 800000 cycles
+,,,;========================================================
+0000001C,,Delay800mS:,Delay800mS:
+0000001C,30FF,,                movlw   .255                    ; 1 cyc
+0000001D,00A4,,                movwf   count1                  ; 1 cyc
+0000001E,,loop1:,loop1:
+0000001E,30F1,,                movlw   .241                            ; 1 cyc * count1
+0000001F,00A3,,                movwf   count0                  ; 1 cyc * count1
+00000020,,loop2:,loop2:
+00000020,0000,,                nop                                             ; 1 cyc * count1 * count0
+00000021,0000,,                nop                                             ; 1 cyc * count1 * count0
+00000022,0000,,                nop                                             ; 1 cyc * count1 * count0
+00000023,0000,,                nop                                             ; 1 cyc * count1 * count0
+00000024,0000,,                nop                                             ; 1 cyc * count1 * count0
+00000025,0000,,                nop                                             ; 1 cyc * count1 * count0
+00000026,0000,,                nop                                             ; 1 cyc * count1 * count0
+00000027,0000,,                nop                                             ; 1 cyc * count1 * count0
+00000028,0000,,                nop                                             ; 1 cyc * count1 * count0
+00000029,0000,,                nop                                             ; 1 cyc * count1 * count0
+0000002A,0BA3,,                decfsz  count0,F        ; 1 cyc * count1 * count0
+0000002B,2820,,                goto    loop2                   ; 2 cyc * count1 * count0
+0000002C,0BA4,,                decfsz  count1,F        ; 1 cyc * count1
+0000002D,281E,,                goto    loop1                   ; 2 cyc * count1
+0000002E,0008,,                return                                  ; 1 cyc
+,,,                ; total = 3 + 5*count1  + 13*count1*count0
+,,,                ; count1 = 255
+,,,                ; 800,000 = 3+5*255+13*255*count0
+,,,                ; count0 = 240.94 = 241
+,,,                ; 10 nop
+,,,
+,,,
+,,,
+,,,                END

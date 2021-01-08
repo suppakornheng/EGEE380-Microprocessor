@@ -1,0 +1,344 @@
+MPASM  5.03                      LAB4_ANS.ASM   11-24-2020  14:28:04         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;*******************************************
+                      00002 ;**** lab4 switch debounce *****************
+                      00003 ;*******************************************
+                      00004 
+                      00005                 PROCESSOR PIC16F628
+                      00006                 #include <P16F628.INC>
+                      00001         LIST
+                      00002 ; P16F628.INC  Standard Header File, Version 1.01    Microchip Technology, Inc.
+                      00261         LIST
+2007   3F58           00007                 __CONFIG        _CP_OFF & _MCLRE_OFF & _INTRC_OSC_NOCLKOUT & _LVP_OFF & _WDT_OFF
+                      00008 
+                      00009 ;****** Define general purpose registers for temporary variables
+                      00010                 cblock  0x20
+  00000020            00011                         temp
+  00000021            00012                         temp1
+  00000022            00013                         count
+  00000023            00014                         count0
+  00000024            00015                         count1
+  00000025            00016                         count2
+                      00017                 endc
+                      00018 ;***********************************************************
+0000                  00019                 ORG             0x00            ; Reset Vector
+0000   2801           00020                 goto    main            ; vector to main program
+                      00021                 
+0001                  00022 main:
+0001   2017           00023                 call    init            ; calling initialization subroutine
+                      00024                 
+0002                  00025 L1:
+0002   1885           00026                 btfsc   PORTA,1
+0003   2809           00027                 goto    L2
+                      00028                 
+0004   300A           00029                 movlw   .10
+0005   2025           00030                 call    DelayMS
+                      00031                 
+0006   1885           00032                 btfsc   PORTA,1
+0007   2809           00033                 goto    L2
+                      00034                 
+0008   1486           00035                 bsf             PORTB,1
+                      00036 
+0009                  00037 L2:             
+0009   1805           00038                 btfsc   PORTA,0         ; Check if the switch is pressed?
+000A   2810           00039                 goto    L3                      ; No the switch is not pressed
+                      00040                 
+000B   300A           00041                 movlw   .10                     ; Yes the switch is pressed then delay for 10mS
+000C   2025           00042                 call    DelayMS         ; by calling the time delay subroutine
+                      00043                 
+000D   1805           00044                 btfsc   PORTA,0         ; Check again if the switch is still pressed?
+000E   2810           00045                 goto    L3                      ; No then go back to check the switch again
+                      00046                 
+000F   1406           00047                 bsf             PORTB,0         ; Yes the switch is still pressed
+                      00048                                                         ; then turn on the LED
+                      00049                 
+0010                  00050 L3:
+MPASM  5.03                      LAB4_ANS.ASM   11-24-2020  14:28:04         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0010   1C05           00051                 btfss   PORTA,0         ; Check if switch is released?
+0011   2813           00052                 goto    L4                      ; No the switch is still pressed
+                      00053                 
+0012   1006           00054                 bcf             PORTB,0         ; Yes the switch is released    
+                      00055                                                         ; then turn off the LED
+                      00056                                                         
+0013                  00057 L4:
+0013   1C85           00058                 btfss   PORTA,1
+0014   2802           00059                 goto    L1
+                      00060                 
+0015   1086           00061                 bcf             PORTB,1
+0016   2802           00062                 goto    L1                      ; Go back and repeat the loop again
+                      00063                 
+                      00064 ;************* Subroutine *******************
+                      00065 
+0017                  00066 init:
+0017   3007           00067                 movlw   .7
+0018   1283 1303      00068                 banksel CMCON
+001A   009F           00069                 movwf   CMCON           ; disable analog comparator
+001B   1683 1303      00070                 banksel TRISB
+001D   3000           00071                 movlw   0x00
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+001E   0086           00072                 movwf   TRISB           ; PORTB is output port
+001F   30FF           00073                 movlw   0xFF
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0020   0085           00074                 movwf   TRISA           ; PORTA is input port
+0021   1283 1303      00075                 banksel PORTB
+0023   0186           00076                 clrf    PORTB
+0024   0008           00077                 return
+                      00078                 
+0025                  00079 DelayMS:
+0025   00A5           00080                 movwf   count2
+0026   0AA5           00081                 incf    count2,f
+0027   0BA5           00082                 decfsz  count2,f
+0028   282A           00083                 goto    $+2
+0029   282C           00084                 goto    $+3
+002A   202D           00085                 call    Delay1MS
+002B   2827           00086                 goto    $-4
+002C   0008           00087                 return
+                      00088                 
+002D                  00089 Delay1MS:
+002D   3032           00090                 movlw   .50                     ; 1 cyc
+002E   00A4           00091                 movwf   count1          ; 1 cyc
+002F                  00092 outterloop:
+002F   3005           00093                 movlw   .5                      ; 1 cyc * count1
+0030   0000           00094                 nop                                     ; 1 cyc * count1
+0031   00A3           00095                 movwf   count0          ; 1 cyc * count1
+0032                  00096 innerloop:
+0032   0BA3           00097                 decfsz  count0,F        ; 1 cyc * count1 * count0
+0033   2832           00098                 goto    innerloop       ; 2 cyc * count1 * count0
+0034   0BA4           00099                 decfsz  count1,F        ; 1 cyc * count1
+0035   282F           00100                 goto    outterloop      ; 2 cyc * count1
+0036   0008           00101                 return                          ; 1 cyc
+MPASM  5.03                      LAB4_ANS.ASM   11-24-2020  14:28:04         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00102                 ; total = 3 + (6+3.count0).count1
+                      00103                 ; count0 = 5 , count1 = 50, total = 1053 cyc ??
+                      00104 
+                      00105                 END
+MPASM  5.03                      LAB4_ANS.ASM   11-24-2020  14:28:04         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ADEN                              00000003
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCPR1H                            00000016
+CCPR1L                            00000015
+CIS                               00000003
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000001F
+CMIE                              00000006
+CMIF                              00000006
+CREN                              00000004
+CSRC                              00000007
+DC                                00000001
+Delay1MS                          0000002D
+DelayMS                           00000025
+EEADR                             0000009B
+EECON1                            0000009C
+EECON2                            0000009D
+EEDATA                            0000009A
+EEIE                              00000007
+EEIF                              00000007
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+L1                                00000002
+L2                                00000009
+L3                                00000010
+L4                                00000013
+NOT_BO                            00000000
+NOT_BOD                           00000000
+NOT_BOR                           00000000
+MPASM  5.03                      LAB4_ANS.ASM   11-24-2020  14:28:04         PAGE  5
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+OERR                              00000001
+OPTION_REG                        00000081
+OSCF                              00000003
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PIE1                              0000008C
+PIR1                              0000000C
+PORTA                             00000005
+PORTB                             00000006
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+RBIE                              00000003
+RBIF                              00000000
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+RX9                               00000006
+RX9D                              00000000
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+STATUS                            00000003
+SYNC                              00000004
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1OSCEN                           00000003
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+MPASM  5.03                      LAB4_ANS.ASM   11-24-2020  14:28:04         PAGE  6
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TMR1L                             0000000E
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISB                             00000086
+TRMT                              00000001
+TX9                               00000006
+TX9D                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+VR0                               00000000
+VR1                               00000001
+VR2                               00000002
+VR3                               00000003
+VRCON                             0000009F
+VREN                              00000007
+VROE                              00000006
+VRR                               00000005
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_CP_50                            00002BFF
+_CP_75                            000017FF
+_CP_ALL                           000003FF
+_CP_OFF                           00003FFF
+_DATA_CP_OFF                      00003FFF
+_DATA_CP_ON                       00003EFF
+_ER_OSC_CLKOUT                    00003FFF
+_ER_OSC_NOCLKOUT                  00003FFE
+_EXTCLK_OSC                       00003FEF
+_HS_OSC                           00003FEE
+_INTRC_OSC_CLKOUT                 00003FFD
+_INTRC_OSC_NOCLKOUT               00003FFC
+_LP_OSC                           00003FEC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_MCLRE_OFF                        00003FDF
+_MCLRE_ON                         00003FFF
+_PWRTE_OFF                        00003FFF
+MPASM  5.03                      LAB4_ANS.ASM   11-24-2020  14:28:04         PAGE  7
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_PWRTE_ON                         00003FF7
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FED
+__16F628                          00000001
+count                             00000022
+count0                            00000023
+count1                            00000024
+count2                            00000025
+init                              00000017
+innerloop                         00000032
+main                              00000001
+outterloop                        0000002F
+temp                              00000020
+temp1                             00000021
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXX---------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    55
+Program Memory Words Free:  1993
+
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :     2 reported,     0 suppressed
+
+

@@ -1,0 +1,100 @@
+,,,                PROCESSOR PIC16F628
+,,,                #include <P16F628.INC>
+00002007,3F4A,,                __CONFIG        _CP_OFF & _MCLRE_OFF & _HS_OSC & _LVP_OFF & _WDT_OFF
+,,,
+,,,                cblock  0x20
+,,,                        temp
+,,,                        temp1
+,,,                        count
+,,,                        count0
+,,,                        count1
+,,,                        count2
+,,,                endc
+00000000,,,                ORG 0x00                ;reset vector
+,,,
+00000000,3007,,                movlw   .7
+00000001,1283 1303,,                banksel CMCON
+00000003,009F,,                movwf   CMCON           ; Disable analog comparator
+00000004,1683 1303,,                banksel TRISB
+00000006,3000,,                movlw   0x00
+00000007,0086,,                movwf   TRISB           ; Set PORTB as an output port
+00000008,1283 1303,,                banksel PORTB
+,,,
+0000000A,0186,,                clrf    PORTB
+0000000B,1406,,                bsf             PORTB,0
+0000000C,01A0,,                clrf    temp
+0000000D,,L1:,L1:
+0000000D,0820,,                movf    temp,w          ;use [Temp] to call 'Table7seg'
+0000000E,2018,,                call    Table7seg
+0000000F,0086,,                movwf   PORTB           ;Send the obtain 7 seg pattern to PORTB
+,,,
+00000010,203C,,                call    Delay500mS
+,,,
+00000011,0AA0,,                incf    temp,f          ;[temp] = [temp] + 1
+,,,
+00000012,300A,,                movlw   .10             ;
+00000013,0220,,                subwf   temp,w
+00000014,1D03,,                btfss   STATUS,Z        ;check if temp=10?
+,,,                                                        ;we want to display total of 16 patterns
+00000015,280D,,                goto    L1                      ;No, go back and do it again
+,,,
+00000016,01A0,,                clrf    temp            ;Yes, clear 'temp' back to zero
+00000017,280D,,                goto    L1                      ;Repeat the infinite loop
+,,,
+,,,;Loopup table for 7segments LED Patterns
+00000018,,Table7seg:,Table7seg:
+00000018,0782,,                addwf   PCL,F
+,,,                ;Segments       .GFEDBA
+00000019,343F,,                retlw   B'00111111'             ;Number0
+0000001A,3406,,                retlw   B'00000110'             ;Number1
+0000001B,345B,,                retlw   B'01011011'             ;Number2
+0000001C,344F,,                retlw   B'01001111'             ;Number3
+0000001D,3466,,                retlw   B'01100110'             ;Number4
+0000001E,346D,,                retlw   B'01101101'             ;Number5
+0000001F,347D,,                retlw   B'01111101'             ;Number6
+00000020,3407,,                retlw   B'00000111'             ;Number7
+00000021,347F,,                retlw   B'01111111'             ;Number8
+00000022,346F,,                retlw   B'01101111'             ;Number9
+00000023,3477,,                retlw   B'01110111'             ;A
+00000024,347C,,                retlw   B'01111100'             ;B
+00000025,3458,,                retlw   B'01011000'             ;C
+00000026,345E,,                retlw   B'01011110'             ;D
+00000027,3479,,                retlw   B'01111001'             ;E
+00000028,3471,,                retlw   B'01110001'             ;F
+00000029,3480,,                retlw   B'10000000'             ;dot-point
+,,,
+,,,
+0000002A,,DelaymS:,DelaymS:
+0000002A,00A5,,                movwf   count2
+0000002B,0AA5,,                incf    count2,f
+0000002C,0BA5,,                decfsz  count2,f
+0000002D,282F,,                goto    $+2
+0000002E,2831,,                goto    $+3
+0000002F,2032,,                call    Delay1mS
+00000030,282C,,                goto    $-4
+00000031,0008,,                return
+,,,
+00000032,,Delay1mS:,Delay1mS:
+00000032,3032,,                movlw   .50                     ; 1 cyc
+00000033,00A4,,                movwf   count1          ; 1 cyc
+00000034,,outterloop:,outterloop:
+00000034,3005,,                movlw   .5                      ; 1 cyc * count1
+00000035,0000,,                nop                                     ; 1 cyc * count1
+00000036,00A3,,                movwf   count0          ; 1 cyc * count1
+00000037,,innerloop:,innerloop:
+00000037,0BA3,,                decfsz  count0,F        ; 1 cyc * count1 * count0
+00000038,2837,,                goto    innerloop       ; 2 cyc * count1 * count0
+00000039,0BA4,,                decfsz  count1,F        ; 1 cyc * count1
+0000003A,2834,,                goto    outterloop      ; 2 cyc * count1
+0000003B,0008,,                return                          ; 1 cyc
+,,,                ; total = 3 + (6+3.count0).count1
+,,,                ; count0 = 5 , count1 = 50, total = 1053 cyc ??
+,,,
+0000003C,,Delay500mS:,Delay500mS:
+0000003C,30FA,,                movlw .250;
+0000003D,202A,,                call  DelaymS;
+0000003E,30FA,,                movlw .250;
+0000003F,202A,,                call  DelaymS;
+00000040,0008,,                return
+,,,
+,,,                END

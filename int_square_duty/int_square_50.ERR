@@ -1,0 +1,6 @@
+Warning[207] C:\EE380\INT_SQUARE_DUTY\INT_SQUARE_50.ASM 26 : Found label after column 1. (PUSH)
+Warning[207] C:\EE380\INT_SQUARE_DUTY\INT_SQUARE_50.ASM 38 : Found label after column 1. (POP)
+Message[302] C:\EE380\INT_SQUARE_DUTY\INT_SQUARE_50.ASM 30 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\EE380\INT_SQUARE_DUTY\INT_SQUARE_50.ASM 43 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\EE380\INT_SQUARE_DUTY\INT_SQUARE_50.ASM 95 : Register in operand not in bank 0.  Ensure that bank bits are correct.
+Message[302] C:\EE380\INT_SQUARE_DUTY\INT_SQUARE_50.ASM 108 : Register in operand not in bank 0.  Ensure that bank bits are correct.

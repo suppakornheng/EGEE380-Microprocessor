@@ -1,0 +1,391 @@
+MPASM  5.03          INT_SQUARE_VARY_DUTY.ASM   11-18-2020  14:58:58         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;*******************************************
+                      00002 ;interrupt_generates_square_wave_50%_duty_cycle.asm
+                      00003 ;*******************************************
+                      00004                 PROCESSOR PIC16F628
+                      00005                 #include <P16F628.INC>
+                      00001         LIST
+                      00002 ; P16F628.INC  Standard Header File, Version 1.01    Microchip Technology, Inc.
+                      00261         LIST
+2007   3F4A           00006                 __CONFIG        _CP_OFF & _MCLRE_OFF & _HS_OSC & _LVP_OFF & _WDT_OFF
+                      00007 
+                      00008                 cblock  0x20
+  00000020            00009                         temp
+  00000021            00010                         temp1
+  00000022            00011                         count
+  00000023            00012                         count0
+  00000024            00013                         count1
+  00000025            00014                         count2
+  00000026            00015                         w_temp
+  00000027            00016                         OPTION_REG_temp
+  00000028            00017                         STATUS_temp
+                      00018                 endc
+0000                  00019                 ORG 0x00                ;reset vector
+0000   2805           00020                 goto main
+                      00021         
+0004                  00022                 ORG     0x04            ;interrupt vector
+0004   280A           00023                 goto TMR0_ISR           ;exit Interrupt Service Routine
+                      00024 
+                      00025 ;---push pop--- 
+Warning[207]: Found label after column 1. (PUSH)
+                      00026                 PUSH    MACRO
+                      00027                 movwf   w_temp          ;       w_temp = w
+                      00028                 swapf   w_temp,f        ;       swap them, ใช้ swap เพราะ movf มีโ
+                            อกาสที่จะไปเปลี่ยน zero flag ใน status register
+                      00029                 banksel TRISA           ;       select bank1
+                      00030                 swapf   OPTION_REG,w;   w= OPTION_REG
+                      00031                 movwf   OPTION_REG_temp;OPTION_REG_temp= w
+                      00032                 banksel PORTA           ;       select bank0
+                      00033                 swapf   STATUS,W        ;       w= STATUS
+                      00034                 MOVWF   STATUS_temp     ;       STATUS_temp= w
+                      00035                 ENDM
+                      00036                 ;PUSH uses 8uS
+                      00037 
+Warning[207]: Found label after column 1. (POP)
+                      00038                 POP     MACRO                           
+                      00039                 SWAPF   STATUS_temp,w
+                      00040                 MOVWF   STATUS
+                      00041                 banksel TRISA           ;       select bank1
+                      00042                 swapf   OPTION_REG_temp,w
+                      00043                 movwf   OPTION_REG
+                      00044                 banksel PORTA           ;       select bank0
+                      00045                 swapf   w_temp,w
+                      00046                 ENDM            
+                      00047                 ;POP uses 7uS
+MPASM  5.03          INT_SQUARE_VARY_DUTY.ASM   11-18-2020  14:58:58         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00048                 ;push+pop = 15uS
+                      00049 ;---end push pop---             
+                      00050 
+0005                  00051 main:
+0005   2028           00052                 call init
+0006                  00053 foreground_task:
+0006   0000           00054                 nop
+0007   0000           00055                 nop
+0008   0000           00056                 nop
+0009   2806           00057                 goto foreground_task
+                      00058 
+                      00059 ;---interrupt---        
+                      00060 ;clock 4MHz, 1cycle=1uS
+                      00061 ;generates square wave, T=200uS, f=5KHz, duty 75%
+                      00062 ;on 150uS -> 150 cycle -> TMR0 Rate 1:1 ->  Timer0 = 256-150 = 106
+                      00063 ;off 50uS -> 50 cycle -> TMR0 Rate 1:1 -> Timer0 = 256-50 = 206
+                      00064 
+                      00065 ;if T=400uS, 2.5KHz -> need 1:2 prescaler, duty 75%
+                      00066 ;on 300uS -> 300 cycle -> TMR0 Rate 1:2 ->  Timer0 = 256-(300/2) = 106
+                      00067 ;off 100uS -> 300 cycle ->TMR0 Rate 1:2 -> Timer0 = 256-(100/2)= 206
+                      00068 ;movlw B'0000 0000'
+                      00069 ;movwf OPTION_REG
+                      00070 
+                      00071 ;exam may change clock frequency
+                      00072 ;clock 8MHz, 1cycle=0.5uS
+                      00073 ;generates square wave, T=200uS, f=5KHz, duty 75%
+                      00074 ;on 150uS -> 300 cycle -> TMR0 Rate 1:1 ->  Timer0 = 256-300 = can't, need prescaler 1:2
+                      00075 ;off 50uS -> 100 cycle -> TMR0 Rate 1:1 -> Timer0 = 256-100 = 156
+                      00076 
+                      00077 ;if T=200uS, 5KHz -> 1:2 prescaler, duty 75%
+                      00078 ;on 150 -> 300 cycle -> TMR0 Rate 1:2 ->  Timer0 = 256-(300/2) = 106
+                      00079 ;off 50uS -> 100 cycle ->TMR0 Rate 1:2 -> Timer0 = 256-(100/2)= 206
+                      00080 ;movlw B'0000 0000'
+                      00081 ;movwf OPTION_REG
+                      00082 
+                      00083 
+000A                  00084 TMR0_ISR:
+                      00085                 PUSH                                    ; 8 cycles
+000A   00A6               M                 movwf   w_temp          ;       w_temp = w
+000B   0EA6               M                 swapf   w_temp,f        ;       swap them, ใช้ swap เพราะ movf มีโ
+                            อกาสที่จะไปเปลี่ยน zero flag ใน status register
+000C   1683 1303          M                 banksel TRISA           ;       select bank1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+000E   0E01               M                 swapf   OPTION_REG,w;   w= OPTION_REG
+000F   00A7               M                 movwf   OPTION_REG_temp;OPTION_REG_temp= w
+0010   1283 1303          M                 banksel PORTA           ;       select bank0
+0012   0E03               M                 swapf   STATUS,W        ;       w= STATUS
+0013   00A8               M                 MOVWF   STATUS_temp     ;       STATUS_temp= w
+0014   110B           00086                 bcf             INTCON,T0IF             ; clear Timer0 interrupt flag
+                      00087 ;--------toggle long code for any% duty only-----------------
+0015   1F86           00088                 btfss   PORTB,7
+0016   281B           00089                 goto    set_hi
+0017   1386           00090 set_low:bcf             PORTB,7
+MPASM  5.03          INT_SQUARE_VARY_DUTY.ASM   11-18-2020  14:58:58         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0018   30CE           00091                 movlw   .206                    ; 
+0019   0081           00092                 movwf   TMR0                    ; off period
+001A   281E           00093                 goto    set_done
+001B   1786           00094 set_hi: bsf             PORTB,7         
+001C   306A           00095                 movlw   .106                    ;
+001D   0081           00096                 movwf   TMR0                    ; on period
+001E                  00097 set_done:                       
+                      00098 ;--------end toggle long code for any% duty only-----------------               
+                      00099                 POP                                             ; 7 cycles
+001E   0E28               M                 SWAPF   STATUS_temp,w
+001F   0083               M                 MOVWF   STATUS
+0020   1683 1303          M                 banksel TRISA           ;       select bank1
+0022   0E27               M                 swapf   OPTION_REG_temp,w
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0023   0081               M                 movwf   OPTION_REG
+0024   1283 1303          M                 banksel PORTA           ;       select bank0
+0026   0E26               M                 swapf   w_temp,w
+0027   0009           00100                 RETFIE
+                      00101 ;---end interrupt---    
+                      00102 
+                      00103 
+                      00104 
+0028                  00105 init:
+                      00106                 ;---Port Config---
+                      00107                 ;CMCON is not necessary if PORTA isn't used
+0028   1683 1303      00108                 banksel TRISB           ; select Bank1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+002A   1386           00109                 bcf             TRISB,7         ; Port RB0 is an output pin (bcf=0=output, bsf=1=input)
+002B   1283 1303      00110                 banksel PORTB           ; select Bank0
+                      00111                 ;---End Port Config---
+                      00112                 ;---Interrupt Config---
+002D   168B           00113                 bsf             INTCON,T0IE     ; enable timer0 interrupt
+002E   110B           00114                 bcf             INTCON,T0IF     ; clear timer0 interrupt flag
+002F   306A           00115                 movlw   .106            ; on period
+0030   0081           00116                 movwf   TMR0            ; set TMR0 = 156
+0031   178B           00117                 bsf             INTCON,GIE      ; enable global interrupt *enable GIE should be the last
+                             code line (dunno why)
+                      00118                 ;---End Interrupt Config---
+                      00119                 ;---Option Config---
+0032   1683 1303      00120                 banksel OPTION_REG
+0034   3000           00121                 movlw   B'00000000'     ; TMR0 Rate 1:1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0035   0081           00122                 movwf   OPTION_REG
+0036   1283 1303      00123                 banksel PORTB
+                      00124                 ;---End Option Config---
+0038   0186           00125                 clrf    PORTB
+0039   0008           00126                 return
+                      00127                 
+                      00128                 END
+MPASM  5.03          INT_SQUARE_VARY_DUTY.ASM   11-18-2020  14:58:58         PAGE  4
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ADEN                              00000003
+BRGH                              00000002
+C                                 00000000
+C1INV                             00000004
+C1OUT                             00000006
+C2INV                             00000005
+C2OUT                             00000007
+CCP1CON                           00000017
+CCP1IE                            00000002
+CCP1IF                            00000002
+CCP1M0                            00000000
+CCP1M1                            00000001
+CCP1M2                            00000002
+CCP1M3                            00000003
+CCP1X                             00000005
+CCP1Y                             00000004
+CCPR1H                            00000016
+CCPR1L                            00000015
+CIS                               00000003
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             0000001F
+CMIE                              00000006
+CMIF                              00000006
+CREN                              00000004
+CSRC                              00000007
+DC                                00000001
+EEADR                             0000009B
+EECON1                            0000009C
+EECON2                            0000009D
+EEDATA                            0000009A
+EEIE                              00000007
+EEIF                              00000007
+F                                 00000001
+FERR                              00000002
+FSR                               00000004
+GIE                               00000007
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTF                              00000001
+IRP                               00000007
+NOT_BO                            00000000
+NOT_BOD                           00000000
+NOT_BOR                           00000000
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RBPU                          00000007
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+OERR                              00000001
+MPASM  5.03          INT_SQUARE_VARY_DUTY.ASM   11-18-2020  14:58:58         PAGE  5
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+OPTION_REG                        00000081
+OPTION_REG_temp                   00000027
+OSCF                              00000003
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PIE1                              0000008C
+PIR1                              0000000C
+POP                               
+PORTA                             00000005
+PORTB                             00000006
+PR2                               00000092
+PS0                               00000000
+PS1                               00000001
+PS2                               00000002
+PSA                               00000003
+PUSH                              
+RBIE                              00000003
+RBIF                              00000000
+RCIE                              00000005
+RCIF                              00000005
+RCREG                             0000001A
+RCSTA                             00000018
+RD                                00000000
+RP0                               00000005
+RP1                               00000006
+RX9                               00000006
+RX9D                              00000000
+SPBRG                             00000099
+SPEN                              00000007
+SREN                              00000005
+STATUS                            00000003
+STATUS_temp                       00000028
+SYNC                              00000004
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1OSCEN                           00000003
+T2CKPS0                           00000000
+T2CKPS1                           00000001
+T2CON                             00000012
+TMR0                              00000001
+TMR0_ISR                          0000000A
+TMR1CS                            00000001
+TMR1H                             0000000F
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+MPASM  5.03          INT_SQUARE_VARY_DUTY.ASM   11-18-2020  14:58:58         PAGE  6
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TMR1ON                            00000000
+TMR2                              00000011
+TMR2IE                            00000001
+TMR2IF                            00000001
+TMR2ON                            00000002
+TOUTPS0                           00000003
+TOUTPS1                           00000004
+TOUTPS2                           00000005
+TOUTPS3                           00000006
+TRISA                             00000085
+TRISB                             00000086
+TRMT                              00000001
+TX9                               00000006
+TX9D                              00000000
+TXEN                              00000005
+TXIE                              00000004
+TXIF                              00000004
+TXREG                             00000019
+TXSTA                             00000098
+VR0                               00000000
+VR1                               00000001
+VR2                               00000002
+VR3                               00000003
+VRCON                             0000009F
+VREN                              00000007
+VROE                              00000006
+VRR                               00000005
+W                                 00000000
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+Z                                 00000002
+_BODEN_OFF                        00003FBF
+_BODEN_ON                         00003FFF
+_CP_50                            00002BFF
+_CP_75                            000017FF
+_CP_ALL                           000003FF
+_CP_OFF                           00003FFF
+_DATA_CP_OFF                      00003FFF
+_DATA_CP_ON                       00003EFF
+_ER_OSC_CLKOUT                    00003FFF
+_ER_OSC_NOCLKOUT                  00003FFE
+_EXTCLK_OSC                       00003FEF
+_HS_OSC                           00003FEE
+_INTRC_OSC_CLKOUT                 00003FFD
+_INTRC_OSC_NOCLKOUT               00003FFC
+_LP_OSC                           00003FEC
+_LVP_OFF                          00003F7F
+_LVP_ON                           00003FFF
+_MCLRE_OFF                        00003FDF
+_MCLRE_ON                         00003FFF
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FF7
+MPASM  5.03          INT_SQUARE_VARY_DUTY.ASM   11-18-2020  14:58:58         PAGE  7
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_WDT_OFF                          00003FFB
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FED
+__16F628                          00000001
+count                             00000022
+count0                            00000023
+count1                            00000024
+count2                            00000025
+foreground_task                   00000006
+init                              00000028
+main                              00000005
+set_done                          0000001E
+set_hi                            0000001B
+set_low                           00000017
+temp                              00000020
+temp1                             00000021
+w_temp                            00000026
+
+
+MEMORY USAGE MAP ('X' = Used,  '-' = Unused)
+
+0000 : X---XXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXXXXXXXX XXXXXXXXXX------
+2000 : -------X-------- ---------------- ---------------- ----------------
+
+All other memory blocks unused.
+
+Program Memory Words Used:    55
+Program Memory Words Free:  1993
+
+
+Errors   :     0
+Warnings :     2 reported,     0 suppressed
+Messages :     4 reported,     0 suppressed
+
+

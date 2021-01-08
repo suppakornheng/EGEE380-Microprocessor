@@ -1,0 +1,56 @@
+,,,;*************************************************************
+,,,;**** Program title: HW3.1 COPY 20H-2FH to 30H-3FH ***********
+,,,;**** Programmer: SUPPAKORN HENGPRASITH 5913370    ***********
+,,,;*************************************************************
+,,,                PROCESSOR PIC16F628
+,,,                #include <P16F628.INC>
+00002007,3F78,,                __CONFIG        _CP_OFF & _MCLRE_ON & _INTRC_OSC_NOCLKOUT & _LVP_OFF & _WDT_OFF
+,,,
+,,,;Declare File register
+,,,counter EQU     40H
+,,,value   EQU     41H
+,,,source  EQU 42H
+,,,destination     EQU     43H
+00000000,,,                ORG     0x00    ; reset vector
+00000000,2804,,                GOTO START      ; jump to start of the program
+,,,
+00000004,,,                ORG     0x04    ; Interrupt vector
+,,,
+00000004,,START:,START:
+,,,; SET 20-2F to 0-F
+00000004,3020,,                movlw   20H
+00000005,0084,,                movwf   FSR
+00000006,0103,,                clrw                    ; clrw = movlw 0H
+00000007,00C1,,                movwf   value   ; set value = w = 0
+00000008,3010,,                movlw   .16             ; set w = 16
+00000009,00C0,,                movwf   counter ; set counter =16
+,,,
+0000000A,0841,AGAIN1:,AGAIN1:  movf   value,w
+0000000B,0080,,                movwf   INDF
+0000000C,0AC1,,                incf    value,f
+0000000D,0A84,,                incf    FSR,f
+0000000E,0BC0,,                decfsz  counter,f
+0000000F,280A,,                goto    AGAIN1
+,,,
+,,,; HW3 Move 20-2F to 30-3F
+00000010,3010,,                movlw   .16             ; set w = 16
+00000011,00C0,,                movwf   counter ; set counter =16
+00000012,3020,,                movlw   20H             ; set w = 20H
+00000013,00C2,,                movwf   source  ; set source = 20H
+00000014,3030,,                movlw   30H             ; set w = 30H
+00000015,00C3,,                movwf   destination     ; set destination = 30H
+,,,
+00000016,,AGAIN2:,AGAIN2:
+00000016,0842,,                movf    source,w
+00000017,0084,,                movwf   FSR
+00000018,0800,,                movf    INDF,w
+00000019,00C1,,                movwf   value
+0000001A,0843,,                movf    destination,w
+0000001B,0084,,                movwf   FSR
+0000001C,0841,,                movf    value,w
+0000001D,0080,,                movwf   INDF
+0000001E,0AC2,,                incf    source,f
+0000001F,0AC3,,                incf    destination,f
+00000020,0BC0,,                decfsz  counter,f
+00000021,2816,,                goto    AGAIN2
+,,,                END

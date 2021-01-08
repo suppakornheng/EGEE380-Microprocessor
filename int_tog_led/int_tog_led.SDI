@@ -1,0 +1,111 @@
+,,,;*******************************************
+,,,;int_tog_led interrupt toggle led
+,,,;*******************************************
+,,,                PROCESSOR PIC16F628
+,,,                #include <P16F628.INC>
+00002007,3F4A,,                __CONFIG        _CP_OFF & _MCLRE_OFF & _HS_OSC & _LVP_OFF & _WDT_OFF
+,,,
+,,,                cblock  0x20
+,,,                        temp
+,,,                        temp1
+,,,                        count
+,,,                        count0
+,,,                        count1
+,,,                        count2
+,,,                        w_temp
+,,,                        OPTION_REG_temp
+,,,                        STATUS_temp
+,,,                endc
+00000000,,,                ORG 0x00                ;reset vector
+00000000,2805,,                goto main
+,,,
+00000004,,,                ORG     0x04            ;interrupt vector
+00000004,281A,,                goto EXT_ISR            ;exit Interrupt Service Routine
+,,,
+,,,;---push pop---
+,,,                PUSH    MACRO
+,,,                movwf   w_temp          ;       w_temp = w
+,,,                swapf   w_temp,f        ;       swap them, ใช้ swap เพราะ movf มีโ
+,,,                banksel TRISA           ;       select bank1
+,,,                swapf   OPTION_REG,w;   w= OPTION_REG
+,,,                movwf   OPTION_REG_temp;OPTION_REG_temp= w
+,,,                banksel PORTA           ;       select bank0
+,,,                swapf   STATUS,W        ;       w= STATUS
+,,,                MOVWF   STATUS_temp     ;       STATUS_temp= w
+,,,                ENDM
+,,,
+,,,                POP     MACRO
+,,,                SWAPF   STATUS_temp,w
+,,,                MOVWF   STATUS
+,,,                banksel TRISA           ;       select bank1
+,,,                swapf   OPTION_REG_temp,w
+,,,                movwf   OPTION_REG
+,,,                banksel PORTA           ;       select bank0
+,,,                swapf   w_temp,w
+,,,                ENDM
+,,,;---end push pop---
+,,,
+00000005,,main:,main:
+,,,                ;---Port Config---
+00000005,3007,,                movlw   .7
+00000006,1283 1303,,                banksel CMCON           ; select Bank0 (CMCON อยู่ Bank0)
+00000008,009F,,                movwf   CMCON           ; Disable analog comparator
+00000009,1683 1303,,                banksel TRISB           ; select Bank1
+0000000B,1005,,                bcf             TRISA,0         ; Port RA0 is an output pin
+0000000C,1406,,                bsf             TRISB,0         ; Port RB0 is an input pin
+0000000D,1283 1303,,                banksel PORTB           ; select Bank0
+,,,                ;---End Port Config---
+,,,                ;---Interrupt Config---
+0000000F,178B,,                bsf             INTCON,GIE      ; enable global interrupt
+00000010,160B,,                bsf             INTCON,INTE     ; enable external interrupt, INT = external interrupt, E
+00000011,108B,,                bcf             INTCON,INTF     ; clear external interrupt flag , F = flag
+,,,                ;; Or using movlw instead of bsf, bcf
+,,,                ;;       BIT: 7654 3219
+,,,                ;movlw  B'1001 0000'; GIE(bit7), INTE(bit4)
+,,,                ;movwf  INTCON          ;
+,,,                ;---End Interrupt Config---
+,,,                ;---Option Config---
+00000012,1683 1303,,                banksel OPTION_REG
+00000014,1301,,                bcf             OPTION_REG,INTEDG; INTEDG=0 interrupt on falling edge of RB0/INT pin
+,,,                ;bsf    OPTION_REG,INTEDG; INTEDG=1 interrupt on rising edge of RB0/INT pin
+,,,                ;---End Option Config---
+00000015,1283 1303,,                banksel PORTA           ; select Bank0 (can use CMCON instead of PORTA)
+,,,
+00000017,0186,,                clrf    PORTB
+00000018,3001,,                movlw   .1
+00000019,00A0,,                movwf   temp            ; temp=1
+,,,
+,,,
+,,,;---interrupt---
+0000001A,,EXT_ISR:,EXT_ISR:
+,,,                PUSH
+0000001A,00A6,,                - movwf   w_temp          ;       w_temp = w
+0000001B,0EA6,,                - swapf   w_temp,f        ;       swap them, ใช้ swap เพราะ movf มีโ
+0000001C,1683 1303,,                - banksel TRISA           ;       select bank1
+0000001E,0E01,,                - swapf   OPTION_REG,w;   w= OPTION_REG
+0000001F,00A7,,                - movwf   OPTION_REG_temp;OPTION_REG_temp= w
+00000020,1283 1303,,                - banksel PORTA           ;       select bank0
+00000022,0E03,,                - swapf   STATUS,W        ;       w= STATUS
+00000023,00A8,,                - MOVWF   STATUS_temp     ;       STATUS_temp= w
+00000024,108B,,                bcf             INTCON,INTF
+00000025,1C05,,                btfss   PORTA,0
+00000026,2829,,                goto    SET_ON
+00000027,,SET_OFF:,SET_OFF:
+00000027,1005,,                bcf             PORTA,0
+00000028,282A,,                goto    SET_DONE
+00000029,1405,SET_ON:,SET_ON: bsf             PORTA,0
+0000002A,,SET_DONE:,SET_DONE:
+,,,                POP
+0000002A,0E28,,                - SWAPF   STATUS_temp,w
+0000002B,0083,,                - MOVWF   STATUS
+0000002C,1683 1303,,                - banksel TRISA           ;       select bank1
+0000002E,0E27,,                - swapf   OPTION_REG_temp,w
+0000002F,0081,,                - movwf   OPTION_REG
+00000030,1283 1303,,                - banksel PORTA           ;       select bank0
+00000032,0E26,,                - swapf   w_temp,w
+00000033,0009,,                RETFIE
+,,,;---end interrupt---
+,,,
+,,,
+,,,
+,,,                END

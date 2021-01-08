@@ -1,0 +1,42 @@
+,,,;*******************************************
+,,,;**** Program title: Running LED ***********
+,,,;**** Programmer: Mr. Chatchai   ***********
+,,,;*******************************************
+,,,                PROCESSOR PIC16F628
+,,,                #include <P16F628.INC>
+00002007,3F78,,                __CONFIG        _CP_OFF & _MCLRE_ON & _INTRC_OSC_NOCLKOUT & _LVP_OFF & _WDT_OFF
+,,,
+,,,;Declare File register
+,,,counter EQU     40H
+,,,value   EQU     41H
+,,,
+00000000,,,                ORG     0x00    ; reset vector
+00000000,2804,,                GOTO START      ; jump to start of the program
+,,,
+00000004,,,                ORG     0x04    ; Interrupt vector
+,,,
+00000004,,START:,START:  ; Port Configuration
+00000004,1303,,                BCF     STATUS,RP1      ; or 'BCF 0x03,0x06'
+00000005,1683,,                BSF     STATUS,RP0      ; Select Bank1
+00000006,1485,,                BSF     TRISA,1         ; Port RA1 is an Input pin
+00000007,1006,,                BCF     TRISB,0         ; Port RB0 is an output pin
+00000008,1283,,                BCF     STATUS,RP0      ; Back to Bank0
+,,,
+,,,                ; Start your program here
+,,,
+00000009,3020,,                movlw   20H
+0000000A,0084,,                movwf   FSR
+0000000B,0103,,                clrw                    ; clrw = movlw 0H
+0000000C,00C1,,                movwf   value   ; set value = w = 0
+0000000D,3010,,                movlw   .16             ; set w = 16
+0000000E,00C0,,                movwf   counter ; set counter =16
+,,,
+0000000F,0841,AGAIN:,AGAIN:  movf    value,w
+00000010,0080,,                movwf   INDF
+00000011,0AC1,,                incf    value,f
+00000012,0A84,,                incf    FSR,f
+00000013,0BC0,,                decfsz  counter,f
+00000014,280F,,                goto    AGAIN
+,,,                ;done
+,,,
+,,,                END

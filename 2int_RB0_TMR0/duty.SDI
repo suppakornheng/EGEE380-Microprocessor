@@ -1,0 +1,124 @@
+,,,;*******************************************
+,,,;**** Program title:  Simple Digital Clock  ***********
+,,,;**** Programmer:                           ***********
+,,,;******************************************
+,,,
+,,,                PROCESSOR PIC16F627A
+,,,                #include <P16F627A.INC>
+00002007,3F78,,                __CONFIG        _CP_OFF & _MCLRE_ON & _INTRC_OSC_NOCLKOUT & _LVP_OFF & _WDT_OFF
+,,,;                                                                             ^
+,,,;
+,,,;
+,,,;                                                               didn't work (last lecture)
+,,,
+,,,;***** Variable Declaration (general purpose registers)
+,,,
+,,,bank0   macro
+,,,                        bcf     STATUS,RP0
+,,,                        bcf     STATUS,RP1
+,,,                endm
+,,,bank1   macro
+,,,                        bsf     STATUS,RP0
+,,,                        bcf     STATUS,RP1
+,,,                endm
+,,,
+,,,PUSH    macro
+,,,                        movwf   W_TEMP
+,,,                        swapf   W_TEMP,f
+,,,                        bank1
+,,,                        swapf   OPTION_REG,w
+,,,                        movwf   OPTION_TEMP
+,,,                        bank0
+,,,                        swapf   STATUS,w
+,,,                        movwf   STATUS_TEMP
+,,,                endm
+,,,
+,,,POP             macro
+,,,                        swapf   STATUS_TEMP,w
+,,,                        movwf   STATUS
+,,,                        bank1
+,,,                        swapf   OPTION_TEMP,w
+,,,                        movwf   OPTION_REG
+,,,                        bank0
+,,,                        swapf   W_TEMP,w
+,,,                endm
+,,,
+,,,                cblock  0x20
+,,,                        STATUS_TEMP             ; temporary variables
+,,,                        W_TEMP
+,,,                        OPTION_TEMP
+,,,                        temp
+,,,                        temp1
+,,,                        count
+,,,                        count0
+,,,                        count1
+,,,                        count2
+,,,                endc
+,,,
+00000000,,,                ORG             0x00            ; Reset Vector
+00000000,2805,,                goto    Mymain          ; vector to main program
+,,,
+,,,
+00000004,,,                ORG             0x04            ; Interrupt Vector
+00000004,2807,,                goto    TMR0_ISR        ; vector to interrup service routine
+,,,
+00000005,,Mymain,Mymain
+00000005,200C,,                call    Init
+00000006,,Here,Here
+00000006,2806,,                goto    Here
+,,,
+,,,
+,,,;***** Timer0 Interrupt Service Routine *****************
+00000007,,TMR0_ISR,TMR0_ISR
+,,,                ;*** context saving ******
+,,,                ;PUSH
+00000007,30EE,,                movlw   D'238'
+00000008,0081,,                movwf   TMR0
+,,,                ;*** TMR0 ISR begins here ****
+00000009,110B,,                bcf             INTCON,T0IF
+0000000A,0986,,                comf    PORTB,f
+,,,                ;*** context retrieving****
+,,,                ;POP
+,,,
+0000000B,0009,,                retfie
+,,,
+,,,;***** Initialization subroutine ************************
+,,,
+0000000C,3007,Init,Init    movlw   .7
+0000000D,1283 1303,,                banksel CMCON
+0000000F,009F,,                movwf   CMCON           ; Disable analog comparator
+00000010,1683 1303,,                banksel TRISB
+00000012,3000,,                movlw   0x00
+00000013,0086,,                movwf   TRISB           ; PORTB are all output
+00000014,1283 1303,,                banksel PORTB
+,,,                ;******************** clear all related registers ********
+00000016,0186,,                clrf    PORTB
+00000017,0185,,                clrf    PORTA
+00000018,3020,,                movlw   0x20            ; the beginning of the general purpose register files
+00000019,0084,,                movwf   FSR
+0000001A,0180,,                clrf    INDF
+0000001B,0A84,,                incf    FSR,f
+0000001C,3080,,                movlw   0x80
+0000001D,0204,,                subwf   FSR,w
+0000001E,1D03,,                btfss   STATUS,Z        ; are we at the end of bank0 RAM yet?
+0000001F,281A,,                goto    $-5
+,,,
+,,,                ;****************** Timer 0 Initialization **************
+,,,                bank1
+00000020,1683,,                        - bsf     STATUS,RP0
+00000021,1303,,                        - bcf     STATUS,RP1
+00000022,3008,,                movlw   b'00001000'     ; yes RBPU, internal clock, PSA to WDT, 1:1
+00000023,0081,,                movwf   OPTION_REG      ; OPTION_REG is in the BANK1 *****
+,,,                bank0
+00000024,1283,,                        - bcf     STATUS,RP0
+00000025,1303,,                        - bcf     STATUS,RP1
+00000026,110B,,                bcf             INTCON,T0IF
+00000027,168B,,                bsf             INTCON,T0IE     ; enable Timer0 interrupt
+00000028,178B,,                bsf             INTCON,GIE      ; enable global interrupt
+00000029,30E7,,                movlw   D'231'
+0000002A,0081,,                movwf   TMR0
+0000002B,0008,,                return
+,,,;******* Initialization subroutine **********************
+,,,
+,,,
+,,,                END

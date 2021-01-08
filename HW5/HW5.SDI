@@ -1,0 +1,99 @@
+,,,                PROCESSOR PIC16F628
+,,,                #include <P16F628.INC>
+00002007,3F4A,,                __CONFIG        _CP_OFF & _MCLRE_OFF & _HS_OSC & _LVP_OFF & _WDT_OFF
+,,,
+,,,                cblock  0x20
+,,,                        temp
+,,,                        temp1
+,,,                        count
+,,,                        count0
+,,,                        count1
+,,,                        count2
+,,,                endc
+00000000,,,                ORG 0x00                ;reset vector
+,,,
+00000000,3007,,                movlw   .7
+00000001,1283 1303,,                banksel CMCON
+00000003,009F,,                movwf   CMCON           ; Disable analog comparator
+00000004,1683 1303,,                banksel TRISB           ; select Bank1
+00000006,1485,,                BSF             TRISA,1         ; Port RA1 is an Input pin
+00000007,3000,,                movlw   0x00            ; w=0
+00000008,0086,,                movwf   TRISB           ; TRISB = 0x00 ,Set PORTB as an output port
+00000009,1283 1303,,                banksel PORTB           ; select Bank0
+,,,
+0000000B,0186,,                clrf    PORTB
+0000000C,3001,,                movlw   .1
+0000000D,00A0,,                movwf   temp            ; temp=1
+,,,
+0000000E,,L1:,L1:
+0000000E,1C85,,                btfss   PORTA,1         ; Active low, use BTFSS (if active high, use BTFSC)
+0000000F,2811,,                goto    button_is_pressed
+00000010,2819,,                goto    button_is_not_pressed
+,,,
+00000011,,button_is_pressed:,button_is_pressed:
+00000011,0AA0,,                incf    temp,f          ;[temp] = [temp] + 1
+00000012,3007,,                movlw   .7              ;
+00000013,0220,,                subwf   temp,w
+00000014,1D03,,                btfss   STATUS,Z        ;check if temp=7?
+00000015,280E,,                goto    L1                      ;No, go back and do it again
+,,,
+00000016,3001,,                movlw   .1
+00000017,00A0,,                movwf   temp            ;Yes, temp =1
+00000018,280E,,                goto    L1                      ;Repeat the infinite loop
+,,,
+00000019,,button_is_not_pressed:,button_is_not_pressed:
+00000019,0820,,                movf    temp,w          ;use [Temp] to call 'DICE_FACES'
+0000001A,201F,,                call    DICE_FACES
+0000001B,0086,,                movwf   PORTB           ;Send the obtain 7 seg pattern to PORTB
+0000001C,2039,,                call    Delay500mS
+0000001D,0186,,                clrf    PORTB
+0000001E,280E,,                goto    L1
+,,,
+,,,
+,,,;Loopup table for 7segments LED Patterns
+0000001F,,DICE_FACES:,DICE_FACES:
+0000001F,0782,,                addwf   PCL,F
+,,,                ;RB       76543210
+00000020,3400,,                retlw   B'00000000'             ;Number0
+00000021,3408,,                retlw   B'00001000'             ;Number1
+00000022,3422,,                retlw   B'00100010'             ;Number2
+00000023,342A,,                retlw   B'00101010'             ;Number3
+00000024,3463,,                retlw   B'01100011'             ;Number4
+00000025,346B,,                retlw   B'01101011'             ;Number5
+00000026,3477,,                retlw   B'01110111'             ;Number6
+,,,
+,,,
+00000027,,DelaymS:,DelaymS:
+00000027,00A5,,                movwf   count2
+00000028,0AA5,,                incf    count2,f
+00000029,0BA5,,                decfsz  count2,f
+0000002A,282C,,                goto    $+2
+0000002B,282E,,                goto    $+3
+0000002C,202F,,                call    Delay1mS
+0000002D,2829,,                goto    $-4
+0000002E,0008,,                return
+,,,
+0000002F,,Delay1mS:,Delay1mS:
+0000002F,3032,,                movlw   .50                     ; 1 cyc
+00000030,00A4,,                movwf   count1          ; 1 cyc
+00000031,,outterloop:,outterloop:
+00000031,3005,,                movlw   .5                      ; 1 cyc * count1
+00000032,0000,,                nop                                     ; 1 cyc * count1
+00000033,00A3,,                movwf   count0          ; 1 cyc * count1
+00000034,,innerloop:,innerloop:
+00000034,0BA3,,                decfsz  count0,F        ; 1 cyc * count1 * count0
+00000035,2834,,                goto    innerloop       ; 2 cyc * count1 * count0
+00000036,0BA4,,                decfsz  count1,F        ; 1 cyc * count1
+00000037,2831,,                goto    outterloop      ; 2 cyc * count1
+00000038,0008,,                return                          ; 1 cyc
+,,,                ; total = 3 + (6+3.count0).count1
+,,,                ; count0 = 5 , count1 = 50, total = 1053 cyc ??
+,,,
+00000039,,Delay500mS:,Delay500mS:
+00000039,30FA,,                movlw .250;
+0000003A,2027,,                call  DelaymS;
+0000003B,30FA,,                movlw .250;
+0000003C,2027,,                call  DelaymS;
+0000003D,0008,,                return
+,,,
+,,,                END

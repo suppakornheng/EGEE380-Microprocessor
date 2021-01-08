@@ -1,0 +1,79 @@
+,,,;*******************************************
+,,,;**** Program title: Running LED ***********
+,,,;**** Programmer: Mr. Chatchai   ***********
+,,,;*******************************************
+,,,                PROCESSOR PIC16F628
+,,,                #include <P16F628.INC>
+00002007,3F78,,                __CONFIG        _CP_OFF & _MCLRE_ON & _INTRC_OSC_NOCLKOUT & _LVP_OFF & _WDT_OFF
+,,,
+,,,;Declare File register
+,,,counter EQU     40H
+,,,value   EQU     41H
+,,,source  EQU 42H
+,,,destination     EQU     43H
+,,,value2  EQU 44H
+00000000,,,                ORG     0x00    ; reset vector
+00000000,2804,,                GOTO START      ; jump to start of the program
+,,,
+00000004,,,                ORG     0x04    ; Interrupt vector
+,,,
+00000004,,START:,START:
+,,,; SET 20-2F to 0-F
+00000004,3020,,                movlw   20H
+00000005,0084,,                movwf   FSR
+00000006,0103,,                clrw                    ; clrw = movlw 0H
+00000007,00C1,,                movwf   value   ; set value = w = 0
+00000008,3010,,                movlw   .16             ; set w = 16
+00000009,00C0,,                movwf   counter ; set counter =16
+,,,
+0000000A,0841,AGAIN1:,AGAIN1:  movf   value,w
+0000000B,0080,,                movwf   INDF
+0000000C,0AC1,,                incf    value,f
+0000000D,0A84,,                incf    FSR,f
+0000000E,0BC0,,                decfsz  counter,f
+0000000F,280A,,                goto    AGAIN1
+,,,
+,,,; HW331 SWITCH 20H and 2FH, 21H and 2EH and so on
+,,,; Method value=a >> a=b >> b=value ;can't because can't access a and b at the same time
+,,,; Method value=a >> value2=b >> b=value >> a= value2
+00000010,3008,,                movlw   .8              ; set w = 8
+00000011,00C0,,                movwf   counter ; set counter =8
+00000012,3020,,                movlw   20H             ; set w = 20H
+00000013,00C2,,                movwf   source  ; set source = 20H
+00000014,302F,,                movlw   2FH             ; set w = 2FH
+00000015,00C3,,                movwf   destination     ; set destination = 2FH
+,,,
+00000016,,AGAIN2:,AGAIN2:
+,,,                ;value=a
+,,,                        ;read a
+00000016,0842,,                movf    source,w
+00000017,0084,,                movwf   FSR
+00000018,0800,,                movf    INDF,w
+,,,                        ;value=a
+00000019,00C1,,                movwf   value
+,,,
+,,,                ;value2=b
+,,,                        ;read b
+0000001A,0843,,                movf    destination,w
+0000001B,0084,,                movwf   FSR
+0000001C,0800,,                movf    INDF,w
+,,,                        ;value2=b
+0000001D,00C4,,                movwf   value2
+,,,
+,,,                ;b=value
+0000001E,0841,,                movf    value,w
+0000001F,0080,,                movwf   INDF
+,,,
+,,,                ;a=value2
+,,,                        ;select a
+00000020,0842,,                movf    source,w
+00000021,0084,,                movwf   FSR
+,,,                        ;a=value2
+00000022,0844,,                movf    value2,w
+00000023,0080,,                movwf   INDF
+,,,
+00000024,0AC2,,                incf    source,f
+00000025,03C3,,                decf    destination,f
+00000026,0BC0,,                decfsz  counter,f
+00000027,2816,,                goto    AGAIN2
+,,,                END

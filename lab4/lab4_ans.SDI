@@ -1,0 +1,105 @@
+,,,;*******************************************
+,,,;**** lab4 switch debounce *****************
+,,,;*******************************************
+,,,
+,,,                PROCESSOR PIC16F628
+,,,                #include <P16F628.INC>
+00002007,3F58,,                __CONFIG        _CP_OFF & _MCLRE_OFF & _INTRC_OSC_NOCLKOUT & _LVP_OFF & _WDT_OFF
+,,,
+,,,;****** Define general purpose registers for temporary variables
+,,,                cblock  0x20
+,,,                        temp
+,,,                        temp1
+,,,                        count
+,,,                        count0
+,,,                        count1
+,,,                        count2
+,,,                endc
+,,,;***********************************************************
+00000000,,,                ORG             0x00            ; Reset Vector
+00000000,2801,,                goto    main            ; vector to main program
+,,,
+00000001,,main:,main:
+00000001,2017,,                call    init            ; calling initialization subroutine
+,,,
+00000002,,L1:,L1:
+00000002,1885,,                btfsc   PORTA,1
+00000003,2809,,                goto    L2
+,,,
+00000004,300A,,                movlw   .10
+00000005,2025,,                call    DelayMS
+,,,
+00000006,1885,,                btfsc   PORTA,1
+00000007,2809,,                goto    L2
+,,,
+00000008,1486,,                bsf             PORTB,1
+,,,
+00000009,,L2:,L2:
+00000009,1805,,                btfsc   PORTA,0         ; Check if the switch is pressed?
+0000000A,2810,,                goto    L3                      ; No the switch is not pressed
+,,,
+0000000B,300A,,                movlw   .10                     ; Yes the switch is pressed then delay for 10mS
+0000000C,2025,,                call    DelayMS         ; by calling the time delay subroutine
+,,,
+0000000D,1805,,                btfsc   PORTA,0         ; Check again if the switch is still pressed?
+0000000E,2810,,                goto    L3                      ; No then go back to check the switch again
+,,,
+0000000F,1406,,                bsf             PORTB,0         ; Yes the switch is still pressed
+,,,                                                        ; then turn on the LED
+,,,
+00000010,,L3:,L3:
+00000010,1C05,,                btfss   PORTA,0         ; Check if switch is released?
+00000011,2813,,                goto    L4                      ; No the switch is still pressed
+,,,
+00000012,1006,,                bcf             PORTB,0         ; Yes the switch is released
+,,,                                                        ; then turn off the LED
+,,,
+00000013,,L4:,L4:
+00000013,1C85,,                btfss   PORTA,1
+00000014,2802,,                goto    L1
+,,,
+00000015,1086,,                bcf             PORTB,1
+00000016,2802,,                goto    L1                      ; Go back and repeat the loop again
+,,,
+,,,;************* Subroutine *******************
+,,,
+00000017,,init:,init:
+00000017,3007,,                movlw   .7
+00000018,1283 1303,,                banksel CMCON
+0000001A,009F,,                movwf   CMCON           ; disable analog comparator
+0000001B,1683 1303,,                banksel TRISB
+0000001D,3000,,                movlw   0x00
+0000001E,0086,,                movwf   TRISB           ; PORTB is output port
+0000001F,30FF,,                movlw   0xFF
+00000020,0085,,                movwf   TRISA           ; PORTA is input port
+00000021,1283 1303,,                banksel PORTB
+00000023,0186,,                clrf    PORTB
+00000024,0008,,                return
+,,,
+00000025,,DelayMS:,DelayMS:
+00000025,00A5,,                movwf   count2
+00000026,0AA5,,                incf    count2,f
+00000027,0BA5,,                decfsz  count2,f
+00000028,282A,,                goto    $+2
+00000029,282C,,                goto    $+3
+0000002A,202D,,                call    Delay1MS
+0000002B,2827,,                goto    $-4
+0000002C,0008,,                return
+,,,
+0000002D,,Delay1MS:,Delay1MS:
+0000002D,3032,,                movlw   .50                     ; 1 cyc
+0000002E,00A4,,                movwf   count1          ; 1 cyc
+0000002F,,outterloop:,outterloop:
+0000002F,3005,,                movlw   .5                      ; 1 cyc * count1
+00000030,0000,,                nop                                     ; 1 cyc * count1
+00000031,00A3,,                movwf   count0          ; 1 cyc * count1
+00000032,,innerloop:,innerloop:
+00000032,0BA3,,                decfsz  count0,F        ; 1 cyc * count1 * count0
+00000033,2832,,                goto    innerloop       ; 2 cyc * count1 * count0
+00000034,0BA4,,                decfsz  count1,F        ; 1 cyc * count1
+00000035,282F,,                goto    outterloop      ; 2 cyc * count1
+00000036,0008,,                return                          ; 1 cyc
+,,,                ; total = 3 + (6+3.count0).count1
+,,,                ; count0 = 5 , count1 = 50, total = 1053 cyc ??
+,,,
+,,,                END
